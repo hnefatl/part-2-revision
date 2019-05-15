@@ -1,0 +1,57 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2cm]{geometry}
+\usepackage{prftree}
+\usepackage{changepage}
+
+\title{\vspace{-1cm}CompArch\vspace{-1cm}}
+\author{}
+\date{}
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{2mm}
+
+% Make ~ look more normal
+\let\oldsim\sim 
+\renewcommand{\sim}{{\oldsim}}
+
+\begin{document}
+\maketitle
+
+\section*{Design Metrics}
+{ 
+    \begin{minipage}[t]{0.3\textwidth}
+    \begin{itemize}
+    \item Energy
+    \item Power
+    \item Performance
+    \item Security
+    \item Cost
+    \item Power Efficiency
+    \item Reliability
+    \end{itemize}
+    \end{minipage}
+    \begin{minipage}[t]{0.65\textwidth}
+    \begin{itemize}
+    \item Focus on common case: overall speed increases even if specific speed decreases.
+    \item Amdahl's Law: \(\text{speedup} = \frac{1}{\text{sequential} + \frac{1 - \text{sequential}}{\text{speedup}_\text{enhanced}}}\)
+    \item Adding enhancements means lower transistor budget, more localised heat, slower clock freq, .... Might affect common case.
+    \item
+    {
+        \[\frac{1}{\text{performance}} = \frac{\text{time}}{\text{program}} = \frac{\text{instructions}}{\text{program}} \times \frac{\text{cycles}}{\text{instruction}} \times \frac{\text{time}}{\text{cycle}}\]
+
+        \begin{itemize}
+        \item Instruction count is affected by the ISA and compiler tech.
+        \item CPI is affected by micro-architecture and ISA.
+        \item Cycle time is affected by circuit design and micro-architecture.
+        \end{itemize}
+    }
+    \end{itemize}
+    \end{minipage}
+
+
+}
+\end{document}

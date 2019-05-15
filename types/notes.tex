@@ -1,0 +1,1132 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2cm]{geometry}
+\usepackage{prftree}
+\usepackage{changepage}
+
+\title{\vspace{-1cm}Types\vspace{-1cm}}
+\author{}
+\date{}
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{2mm}
+
+% Make ~ look more normal
+\let\oldsim\sim 
+\renewcommand{\sim}{{\oldsim}}
+
+\begin{document}
+\maketitle
+\section{Proof}
+{
+    \subsubsection*{Structural Induction}
+    {
+
+        Proof based on the rules, so `structural induction on \(\vdash\)' not `on \(\Gamma\vdash e : \tau\)'.
+
+        For each rule, the `case' is the rule. We assume that both the judgements on the top hold (as they're subterms)
+        and that the hypothesis holds \textbf{on those terms}.
+    
+    }
+}
+\section{Terminology}
+{
+    \begin{description}
+    \item[Congruence Rule]\hfill\\A rule for \(\leadsto\) that reduces a subterm, like \(e_1\;e_2 \leadsto e_1'\;e_2\).
+    \item[Reduction Rule]\hfill\\A rule for \(\leadsto\) that transform the term, like \((\lambda x:X.\;e)\;v \leadsto
+    e[v/x]\).
+    \end{description}
+}
+\section{Theorems}
+{
+    \begin{description}
+    \item[Weakening]
+    {
+        \hfill
+
+        If \(\Gamma,\Gamma' \vdash e : \tau\) then \(\Gamma, x : \tau'', \Gamma' \vdash e : \tau\).
+
+        If a term typechecks under a context, then it typechecks under a larger context.
+    }
+    \item[Exchange]
+    {
+        \hfill
+
+        If \(\Gamma, x_1 : \tau_1, x_2 : \tau_2, \Gamma' \vdash e : \tau\) then \(\Gamma, x_2 : \tau_2, x_1 : \tau_1,
+        \Gamma' \vdash e : \tau\).
+
+        If a term typechecks in a context, then it typechecks in a reordered context.
+
+    }
+    \item[Substitution]
+    {
+        \hfill
+        
+        If \(\Gamma \vdash e : \tau\) and \(\Gamma, x : \tau \vdash e' : \tau'\) then \(\Gamma \vdash [e/x]e' : \tau'\).
+
+        Substituting a type-correct term for a variable preserves type-correctness.
+    }
+    \item[Progress]
+    {
+        \hfill
+
+        If \(\cdot \vdash e : \tau\) then either \(e\) is a value or \(\exists e'.\; e \leadsto e'\).
+
+        Type-correct terms are never stuck. Note that it's \(\cdot\) not any \(\Gamma\).
+    }
+    \item[Preservation]
+    {
+        \hfill
+
+        If \(\cdot \vdash e : \tau\) and \(\exists e'.\; e \leadsto e'\) then \(\cdot \vdash e' : \tau\).
+
+        Evaluation preserves types (evaluation may be non-terminating). Note that it's \(\cdot\) not any \(\Gamma\).
+
+        Proof by structural induction on \(e \leadsto e'\).
+    }
+    \item[Determinacy]
+    {
+        \hfill
+
+        If \(e \leadsto e'\) and \(e \leadsto e''\) then \(e' = e''\).
+        
+        Proof by structural induction on \(e \leadsto e'\).
+    }
+    \item[Type Safety] Progresss + Preservation
+    \item[Consistency]
+    {
+        \hfill
+
+        There are no proofs of \(\bot\), or there are no terms \(e\) such that \(\cdot\vdash e : 0\).
+
+        Possible in all good logics, but only possible in \textbf{total} languages.
+    }
+    \item[Curry-Howard Correspondence]
+    {
+        \hfill
+
+        Programs are proofs, types are formulae. Not an isomorphism, consider \(X \Longrightarrow (Y \Longrightarrow X \wedge Y)\).
+    }
+    \item[Type Weakening] If \(\Theta,\Theta'\vdash A\text{ type}\) then \(\Theta,\beta,\Theta'\vdash A\text{ type}\).
+    \item[Type Exchange] If \(\Theta,\beta,\gamma,\Theta'\vdash A\text{ type}\) then \(\Theta,\gamma,\beta,\Theta'\vdash
+    A\text{ type}\).
+    \item[Type Substitution] If \(\Theta\vdash A\text{ type}\) and \(\Theta,\alpha\vdash B\text{ type}\) then
+    \(\Theta\vdash B[A/\alpha]\text{ type}\).
+    \item[Context Weakening] If \(\Theta,\Theta'\vdash \Gamma\text{ ctx}\) then \(\Theta,\alpha,\Theta'\vdash \Gamma\text{ ctx}\).
+    \item[Context Exchange] If \(\Theta,\beta,\gamma,\Theta'\vdash \Gamma\text{ ctx}\) then
+    \(\Theta,\gamma,\beta,\Theta'\vdash \Gamma\text{ ctx}\).
+    \item[Context Substitution] If \(\Theta\vdash A\text{ type}\) and \(\Theta,\alpha\vdash \Gamma\text{ ctx}\) then
+    \(\Theta\vdash \Gamma[A/\alpha]\text{ ctx}\).
+    \item[Regularity]
+    {
+        \hfill
+        
+        If \(\Theta\vdash\Gamma\text{ ctx}\) and \(\Theta;\Gamma\vdash e:A\) then \(\Theta\vdash A\text{ type}\).
+
+        Typechecking only succeeds for well-formed types.
+
+        Proof by structural induction on \(\Theta;\Gamma\vdash e:A\).
+    
+    }
+    \end{description}
+}
+\section{Recursive Functions}
+{
+    \begin{gather*}
+    v ::= ... \mid \text{fun}_{X \rightarrow Y}\;f\;x.\;e
+    \\
+    \\
+    \prftree[r]{(Fix)}
+    {\Gamma,f:X \rightarrow Y,x:X \vdash e : Y}
+    {\Gamma\vdash \text{fun}_{X \rightarrow Y}\;f\;x.\;e : X \rightarrow Y}
+    \hspace{1cm}
+    \prftree[r]{}
+    {(\text{fun}_{X \rightarrow Y}\;f\;x.\;e) v \leadsto e[v/x, (\text{fun}_{X \rightarrow Y}\;f\;x.\;e)/f]}
+    \end{gather*}
+
+    Natural for defining functions: \(\text{fun}_{\texttt{int}\rightarrow\texttt{int}}\;fact\;n.\;\text{if }n = 0
+    \text{ then }1\text{ else }n \times fact (n-1)\). Also allows for infinite recursion, so no longer total/consistent.
+
+}
+\section{The Halt Relation}
+{
+
+    \(e\) halts iff \(\exists v.\; e \leadsto^* v\).
+
+    Define a type-indexed family of sets of terms: 
+    \begin{itemize}
+    \item \(\text{Halt}_0 = \emptyset\): there are no terms of type \(0\) that halt.
+    \item \(e \in \text{Halt}_1\) only when \(e\) halts and \(\cdot \vdash e : 1\).
+    \item \(e \in \text{Halt}_{X \rightarrow Y}\) only when \(e\) halts, \(\cdot \vdash e : X \rightarrow Y\) , and
+    \(\forall e'.\; e' \in \text{Halt}_X \Longrightarrow (e\;e') \in \text{Halt}_Y\).
+    \end{itemize}
+
+    All terms in \(\text{Halt}_1\) halt, all terms in \(\text{Halt}_{X \rightarrow Y}\) are functions which preserve the
+    property of halting, ...
+
+    \subsection*{Halting}
+    {
+        If \(e\in\text{Halt}_X\) then \(e\) halts (\(\exists v.\;e \leadsto^* v\)).
+
+    }
+    \subsection*{Closure Lemma}
+    {
+        If \(e \leadsto e'\) then \(e \in \text{Halt}_X \Longleftrightarrow e' \in \text{Halt}_X\).
+        
+        Proof by induction on the `type indices' to the sets, ie.\ by structural induction where we need to prove the
+        lemma for the types \(X = 1, Y \rightarrow Z, ...\), assuming for the IH that \(\text{Halt}_t\) holds for all
+        subtypes \(t\) of \(X\).
+
+    }
+    \subsection*{The Fundamental Lemma}
+    {
+        
+        If \(\forall n \geq 0\), \(x_1:X_1,...,x_n:X_n \vdash e : Z\) and \(\forall i\in[1..n]\), \(\cdot\vdash
+        v_i:X_i\) and \(v_i \in \text{Halt}_{X_i}\), then \([v_1/x_1,...,v_n/x_n]e \in \text{Halt}_Z\).
+
+        Proof by structural induction on \(x_1:X_1,...,x_n:X_n \vdash e : Z\) (go through the rules).
+
+        This is powerful as it says that \textit{all well-typed terms terminate}.
+
+    }
+    \subsection*{Consistency}
+    {
+        There are no terms \(e\) such that \(\Gamma\vdash e : 0\). Proof by contradiction using the fundamental lemma:
+
+        Assume \(\Gamma\vdash e : 0\), then by the fundamental lemma (with \(n=0\)) \(e \in \text{Halt}_0\). But by the
+        definition of \(\text{Halt}_0\), \(e\notin\text{Halt}_0\), so contradiction.
+
+    }
+}
+\section{Halt for System F}
+{
+
+    Similar to Halt for STLC, but uses a semantic interpretation to define the sets. Probably too complex to be expected
+    to remember, rules would be given in exam.
+
+}
+\section{Datatypes}
+{
+    \subsection{STLC}
+    {
+        \begin{tabular}{c | l}
+        Builtin & Encoding \\
+        \hline
+        Bool & \(1+1\) \\
+        True & L \(\langle\rangle\) \\
+        False & R \(\langle\rangle\) \\
+        if \(e\) then \(e'\) else \(e''\) & \(\text{case}(e,\text{L \_}\rightarrow e',\text{R \_}\rightarrow e'')\) \\
+        \\
+        Char & Bool\(^7\) \\
+        `A' & (True,False,False,False,False,False,True) \\
+        ... & ...
+        \end{tabular}
+    }
+    \subsection{PLC}
+    {
+
+        \begin{tabular}{c | l}
+        Builtin & Encoding \\
+        \hline
+        Bool & \(\forall\alpha.\;\alpha\rightarrow\alpha\rightarrow\alpha\) \\
+        True & \(\Lambda\alpha.\;\lambda x:\alpha.\;\lambda y:\alpha.\;x\) \\
+        False & \(\Lambda\alpha.\;\lambda x:\alpha.\;\lambda y:\alpha.\;y\) \\
+        if \(e\) then \(e'\) else \(e''\) \(: X\) & \(e\;X\;e'\;e''\) \\
+        \\
+        \(X \times Y\) & \(\forall\alpha.\;(X \rightarrow Y \rightarrow \alpha) \rightarrow \alpha\) \\
+        \(\langle e,e' \rangle\) & \(\Lambda\alpha. \lambda k:X \rightarrow Y \rightarrow \alpha.\; k\;e\;e'\) \\
+        fst \(e\) & \(e\;X\;(\lambda x:X.\;\lambda y:Y.\;x)\) \\
+        snd \(e\) & \(e\;X\;(\lambda x:X.\;\lambda y:Y.\;y)\) \\
+        \\
+        \(X+Y\) & \(\forall\alpha.\;(X\rightarrow\alpha)\rightarrow(Y\rightarrow\alpha)\rightarrow\alpha\) \\
+        L \(e\) & \(\Lambda\alpha.\;\lambda f:(X\rightarrow\alpha).\;\lambda g:(Y\rightarrow\alpha).\;f\;e\) \\
+        R \(e\) & \(\Lambda\alpha.\;\lambda f:(X\rightarrow\alpha).\;\lambda g:(Y\rightarrow\alpha).\;g\;e\) \\
+        case\((e,\text{L }x\rightarrow e_1,\text{R }y\rightarrow e_2) : Z\) & \(e\;Z\;(\lambda x:(X \rightarrow
+        Z).\;e_1)\;(\lambda y:(Y \rightarrow Z).\;e_2)\) \\
+        \\
+        \(\mathbb{N}\) & \(\forall\alpha.\;\alpha\rightarrow(\alpha\rightarrow\alpha)\rightarrow\alpha\) \\
+        z & \(\Lambda\alpha.\;\lambda z:\alpha.\;\lambda s:(\alpha\rightarrow\alpha).\;z\) \\
+        s\((e)\) & \(\Lambda\alpha.\;\lambda z:\alpha.\;\lambda s:(\alpha\rightarrow\alpha).\;s\;(e\;\alpha\;z\;s)\) \\
+        iter\((e,\text{z}\rightarrow e_z,\text{s}(x)\rightarrow e_s) : X\) & \(e\;X\;e_z\;(\lambda x:X.\;e_s)\) \\
+        ... & ...
+        \end{tabular}
+
+        The function(s) `attached' to the encoded datatypes are selection operations: for Bool it's switching, for pairs
+        it's selecting, for sums it's conditional.
+        \begin{align*}
+        \text{if True then }e'\text{ else } e'' : A &= \text{True}\;A\;e'\;e'' \\
+                                    &= (\Lambda\alpha.\;\lambda x:\alpha.\;\lambda y:\alpha.\;x)\;A\;e'\;e'' \\
+                                    &= (\lambda x:A.\;\lambda y:A.\;x)\;e'\;e'' \\
+                                    &= (\lambda y:A.\;e')\;e'' \\
+                                    &= e' \\
+        \end{align*}
+    }
+}
+\section{Existentials}
+{
+
+    \begin{alignat*}{4}
+    &\text{Types } &&A &&::= ... \mid \exists\alpha.\;A && \\
+    &\text{Terms } &&e &&::= ... \mid \text{pack}_{\alpha.B}(A,e) \mid \text{let pack}(\alpha,x) = e\text{ in }e' && \\
+    &\text{Values } &&v &&::= \text{pack}_{\alpha.B}(A,v) &&
+    \end{alignat*}
+
+    \begin{gather*}
+    \prftree[r]{(\(\exists_\text{I}\))}
+    {\Theta,\alpha\vdash A\text{ type}}
+    {\Theta\vdash C\text{ type}}
+    {\Theta;\Gamma\vdash e:A[C/\alpha]}
+    {\Theta;\Gamma\vdash \text{pack}_{\alpha,A}(C,e) : \exists\alpha.\;A}
+    \\
+    \\
+    \prftree[r]{(\(\exists_\text{I}\))}
+    {\Theta;\Gamma\vdash e:\exists\alpha.\;C}
+    {\Theta,\alpha;\Gamma,x:C \vdash e' : D}
+    {\Theta\vdash D\text{ type}}
+    {\Theta;\Gamma\vdash \text{let pack}(\alpha,x) = e\text{ in }e':D}
+    \\
+    \\
+    \prftree[r]{}
+    {\text{let pack}(\alpha,x) = \text{pack}_{\alpha,A}(C,v) \text{ in } e \leadsto e[C/\alpha,v/x]}
+    \end{gather*}
+
+    \(\alpha\) is a placeholder for the concrete type, \(C\) is the \textit{concrete} type, and \(A\) is the
+    \textit{abstract} interface.
+
+    \begin{itemize}
+    \item
+    {
+
+        \(\text{pack}_{\alpha,A}(C,e)\) packs a implementation \(e\) with concrete type \(C\) into a provider for the
+        \(\alpha,A\) interface.
+
+    }
+    \item
+    {
+
+        \(\text{let pack}(\alpha, x) = \text{pack}_{\alpha,A}(C,v)\text{ in }e\) unpacks a provider for the \(\alpha,A\)
+        interface into the concrete type and implementation \(\alpha\) and \(x\).
+
+    }
+    \end{itemize}
+
+    \subsection*{Encoding}
+    {
+
+        \begin{tabular}{l | l}
+        Original & Encoding \\
+        \hline
+        \(\exists\alpha.\;A\) & \(\forall\beta.\;(\forall\alpha.\;A\rightarrow\beta)\rightarrow\beta\) \\
+        \(\text{pack}_{\alpha,A}(C,e)\) & \(\Lambda\beta.\;\lambda k:(\forall\alpha.\;A\rightarrow\beta).\;k\;C\;e\) \\
+        \(\text{let pack}(\alpha,x) = e\text{ in }e' : D\) & \(e\;D\;(\Lambda\alpha.\;\lambda x:A.\;e')\) \\
+        \end{tabular}
+    }
+}
+\section{State}
+{
+
+    \begin{alignat*}{4}
+    &\text{Types } &&X &&::= ... \mid \text{ref }X && \\
+    &\text{Terms } &&e &&::= ... \mid \text{new }e \mid\;!e \mid e := e' \mid l && \\
+    &\text{Values } &&v &&::= ... \mid l && \\
+    &\text{Stores } &&\sigma &&::= \cdot \mid \sigma,l:v && \\
+    &\text{Store Typings } &&\Sigma &&::= \cdot \mid \Sigma,l:X &&
+    \end{alignat*}
+    
+    \begin{gather*}
+    \prftree[r]{}
+    {\Sigma;\Gamma\vdash e:X}
+    {\Sigma;\Gamma\vdash \text{new }e:\text{ref }X}
+    \qquad
+    \prftree[r]{}
+    {l:X \in \Sigma}
+    {\Sigma;\Gamma\vdash l : \text{ref }X}
+    \\
+    \\
+    \prftree[r]{}
+    {\Sigma;\Gamma\vdash e:\text{ref }X}
+    {\Sigma;\Gamma\vdash\;!e:X}
+    \qquad
+    \prftree[r]{}
+    {\Sigma;\Gamma\vdash e:\text{ref }X}
+    {\Sigma;\Gamma\vdash e':X}
+    {\Sigma;\Gamma\vdash\;e:=e':1}
+    \end{gather*}
+
+    Operational semantics are for \(\langle \sigma,e \rangle\).
+
+    There's a store well-typing rule but the notes mess it up: essentially for each store element, compare the type
+    inferred from the value to the type stored in the store context \(\Sigma\).
+
+    \subsection*{Preservation}
+    {
+        The normal preservation property no longer holds:
+
+        \(e = \langle\cdot;\text{new }\langle\rangle\rangle : \langle\cdot;\text{ref }1\rangle\), but \(e\leadsto
+        \langle l:\langle\rangle;l\rangle : \langle l:1;\text{ref }1\rangle\), where the stores don't match.
+
+        \subsubsection*{Store Extension}
+        {
+            Define \(\Sigma \leq \Sigma'\) to mean \(\exists\Sigma''.\; \Sigma'=\Sigma,\Sigma''\).
+        }
+        \subsubsection*{Store Monotonicity}
+        {
+            If \(\Sigma\leq\Sigma'\) then:
+            \begin{enumerate}
+            \item If \(\Sigma;\Gamma\vdash e : X\) then \(\Sigma';\Gamma\vdash e : X\).
+            \item If \(\Sigma\vdash \sigma_0 : \Sigma_0\) then \(\Sigma'\vdash \sigma_0 : \Sigma_0\).
+            \end{enumerate}
+
+            Allocating new references never breaks term typability.
+        }
+        \subsubsection*{Preservation Repaired}
+        {
+
+            If \(\langle\sigma;e\rangle : \langle\Sigma;X\rangle\) and
+            \(\langle\sigma;e\rangle\leadsto\langle\sigma';e'\rangle\), then there exists a \(\Sigma'\geq\Sigma\) such
+            that \(\langle\sigma';e'\rangle : \langle\Sigma';X\rangle\).
+
+        }
+    }
+    \subsection*{Recursion}
+    {
+
+        With state we can perform recursion even in the STLC, by storing and updating a function in a reference.
+
+    }
+}
+\section{Monads}
+{
+    Separate judgements between pure and impure computations, to prevent pure code being able to perform impure.
+
+    \begin{alignat*}{4}
+    &\text{Types } &&X &&::= ... \mid \text{ref }X \mid T\;X && \\
+    &\text{Pure Terms } &&e &&::= ... \mid l \mid \{t\} && \\
+    &\text{Impure Terms } &&t &&::= \text{new }e \mid \;!e \mid e:=e' \mid \text{let }x=e;\;t \mid \text{return }e && \\
+    &\text{Values } &&t &&::= ... \mid l \mid \{t\} &&
+    \end{alignat*}
+
+    \begin{gather*}
+    \prftree[r]{}
+    {\Sigma;\Gamma\vdash t \div X}
+    {\Sigma;\Gamma\vdash \{t\} : T\;X}
+    \\
+    \\
+    \prftree[r]{}
+    {\Sigma;\Gamma\vdash e : \text{ref }X}
+    {\Sigma;\Gamma\vdash \;!e \div X}
+    \qquad
+    \prftree[r]{}
+    {\Sigma;\Gamma\vdash e : X}
+    {\Sigma;\Gamma\vdash \text{return }e \div X}
+    \qquad
+    \prftree[r]{}
+    {\Sigma;\Gamma\vdash e : T\;X}
+    {\Sigma;\Gamma,x:X \vdash t \div X}
+    {\Sigma;\Gamma\vdash\text{let }x=e;\;t\div Z}
+    \qquad
+    ...
+    \end{gather*}
+
+    \(\text{let }x=e;\;t\div Z\) evaluates a monadic effect within other impure code. \textbf{No escape from the monad},
+    though.
+
+    All the impure terms are typed by \(\div\): no introduction of the \(T\) monad yet. The \(\{t\}\) term in the pure
+    terms converts a judgement of \(\div\) into a monadic type so it can be passed around pure code without tainting it.
+
+    Proofs are by mutual induction, as there are distinct properties for pure and impure terms.
+}
+\section{Classical Logic}
+{
+    \subsection*{Logic}
+    {
+
+        Step away from the intuitionistic view of refutations being deriving (\(\neg P
+        \stackrel{\text{def}}{=}P\Longrightarrow\bot\)) by making them first-class.
+
+        \begin{alignat*}{4}
+        &\text{Propositions } &&A && ::= \top \mid \bot \mid \neg A \mid A \wedge B \mid A \vee B && \\
+        &\text{True Contexts } &&\Gamma && ::= \cdot \mid \Gamma,A && \\
+        &\text{False Contexts } &&\Delta && ::= \cdot \mid \Delta,A &&
+        \end{alignat*}
+
+        A proof is \(\Gamma;\Delta\vdash A\text{ true}\): if things in \(\Gamma\) are true and things in \(\Delta\) are
+        false, then \(A\) is true. Similarly for \(\Gamma;\Delta\vdash A\text{ false}\).
+
+        A refutation is \(\Gamma;\Delta\vdash \text{contr}\), when \(\Gamma\) and \(\Delta\) contradict one another.
+
+        Note that there's no implication: can derive it as \(A \Longrightarrow B\stackrel{\text{def}}{=}\neg A \vee B\).
+
+        \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        Proofs
+        \begin{gather*}
+        \prftree[r]{}
+        {A\in\Gamma}
+        {\Gamma;\Delta \vdash A \text{ true}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta \vdash \top \text{ true}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash A\text{ true}}
+        {\Gamma;\Delta\vdash B\text{ true}}
+        {\Gamma;\Delta\vdash A \wedge B\text{ true}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash A\text{ true}}
+        {\Gamma;\Delta\vdash A \vee B\text{ true}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash B\text{ true}}
+        {\Gamma;\Delta\vdash A \vee B\text{ true}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash A\text{ false}}
+        {\Gamma;\Delta\vdash \neg A\text{ true}}
+        \end{gather*}
+        \end{minipage}
+        \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        Refutations
+        \begin{gather*}
+        \prftree[r]{}
+        {A\in\Delta}
+        {\Gamma;\Delta \vdash A \text{ false}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta \vdash \bot \text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash A\text{ false}}
+        {\Gamma;\Delta\vdash B\text{ false}}
+        {\Gamma;\Delta\vdash A \vee B\text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash A\text{ false}}
+        {\Gamma;\Delta\vdash A \wedge B\text{ false}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash B\text{ false}}
+        {\Gamma;\Delta\vdash A \wedge B\text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash A\text{ true}}
+        {\Gamma;\Delta\vdash \neg A\text{ false}}
+        \end{gather*}
+        \end{minipage}
+
+        These allow proving \textbf{most} of classical logic, but not all: we can't prove \(\neg\neg A;\cdot \vdash A\),
+        or \(A \wedge B \Longrightarrow A\).
+
+        Introduce contradiction rules:
+
+        \begin{gather*}
+        \prftree[r]{}
+        {\Gamma;\Delta,A\vdash\text{ contr}}
+        {\Gamma;\Delta\vdash A\text{ true}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma,A;\Delta\vdash\text{ contr}}
+        {\Gamma;\Delta\vdash A\text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash A\text{ true}}
+        {\Gamma;\Delta\vdash A\text{ false}}
+        {\Gamma;\Delta\vdash \text{ contr}}
+        \end{gather*}
+
+    }
+    \subsection*{Language}
+    {
+
+        STLC + continuations. Essentially mirrors the logic:
+
+        \begin{alignat*}{4}
+        &\text{Propositions } &&X &&::= \top \mid \bot \mid X \wedge Y \mid X \vee Y && \\
+        &\text{True Contexts } &&\Gamma &&::= \cdot \mid \Gamma,x:A && \\
+        &\text{False Contexts } &&\Delta &&::= \cdot \mid \Delta,u:A && \\
+        \\
+        &\text{Expressions } &&e &&::= \langle\rangle \mid \langle e,e' \rangle \mid \text{L }e \mid \text{R }e \mid
+        \text{not}(k) \mid \mu u : A.\; c && \\
+        &\text{Continuations } &&k &&::= [] \mid [e,e'] \mid \text{fst }e \mid \text{snd }e \mid \text{not}(e) \mid \mu
+        x : A.\; c && \\
+        &\text{Contradictions } &&c &&::= \langle e \mid_A k \rangle &&
+        \end{alignat*}
+
+        \begin{minipage}[t]{0.49\textwidth}
+        \footnotesize
+        \centering
+        Proof Terms
+        \begin{gather*}
+        \prftree[r]{}
+        {x:A\in\Gamma}
+        {\Gamma;\Delta\vdash x:A\text{ true}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash \langle\rangle:\top\text{ true}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash e :A\text{ true}}
+        {\Gamma;\Delta\vdash e' :A\text{ true}}
+        {\Gamma;\Delta\vdash \langle e,e' \rangle :A \wedge B\text{ true}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash e:A\text{ true}}
+        {\Gamma;\Delta\vdash \text{L }e:A \vee B\text{ true}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash e:B\text{ true}}
+        {\Gamma;\Delta\vdash \text{R }e:A \vee B\text{ true}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash k:A\text{ false}}
+        {\Gamma;\Delta\vdash \text{not}(k):A\text{ true}}
+        \\
+        \end{gather*}
+        \end{minipage}
+        \begin{minipage}[t]{0.49\textwidth}
+        \footnotesize
+        \centering
+        Refutation Terms
+        \begin{gather*}
+        \prftree[r]{}
+        {x:A\in\Delta}
+        {\Gamma;\Delta\vdash x:A\text{ false}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash []:\bot\text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash k :A\text{ false}}
+        {\Gamma;\Delta\vdash k' :A\text{ false}}
+        {\Gamma;\Delta\vdash [k,k'] :A \vee B \text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash k:A\text{ false}}
+        {\Gamma;\Delta\vdash \text{fst }k:A \wedge B\text{ false}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash k:B\text{ false}}
+        {\Gamma;\Delta\vdash \text{snd }k:A \wedge B\text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash e:A\text{ true}}
+        {\Gamma;\Delta\vdash \text{not}(e):A\text{ false}}
+        \\
+        \end{gather*}
+        \end{minipage}
+
+        Contradictions are also similar. Note that \(\Gamma;\Delta\vdash c\text{ contr}\) is a completely different
+        judgement than \(\Gamma;\Delta\vdash c\text{ true}\).
+
+        A contradiction \(\langle e \mid_A k \rangle\) is a term containing two terms which prove the truth and
+        falsehood of a type \(A\).
+
+        \begin{gather*}
+        \prftree[r]{}
+        {\Gamma;\Delta,u:A\vdash c\text{ contr}}
+        {\Gamma;\Delta\vdash (\mu u:A.\;c):A\text{ true}}
+        \qquad
+        \prftree[r]{}
+        {\Gamma,x:A;\Delta\vdash c\text{ contr}}
+        {\Gamma;\Delta\vdash (\mu x:A.\;c):A\text{ false}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Gamma;\Delta\vdash e:A \text{ true}}
+        {\Gamma;\Delta\vdash k:A \text{ false}}
+        {\Gamma;\Delta\vdash \langle e \mid_A k \rangle \text{ contr}}
+        \\
+        \end{gather*}
+
+        Operational semantics for contradictions \(\langle e \mid_A k \rangle\):
+
+        \begin{gather*}
+        \langle\langle e_1,e_2 \rangle \mid_{A \wedge B} \text{fst }k\rangle \leadsto \langle e_1 \mid_A k \rangle
+        \qquad
+        \langle \text{R }e \rangle \mid_{A \wedge B} [k_1,k_2] \rangle \leadsto \langle e \mid_A k_2 \rangle
+        \\
+        \\
+        \langle\langle e_1,e_2 \rangle \mid_{A \wedge B} \text{snd }k\rangle \leadsto \langle e_2 \mid_A k \rangle
+        \qquad
+        \langle \text{L }e \rangle \mid_{A \wedge B} [k_1,k_2] \rangle \leadsto \langle e \mid_A k_1 \rangle
+        \\
+        \\
+        \langle \text{not}(k) \mid_{\neg A} \text{not}(e) \rangle \leadsto \langle e \mid_A k \rangle
+        \\
+        \\
+        \langle \mu u:A.\;c \mid_A k \rangle \leadsto c[k/u]
+        \qquad
+        \langle e \mid_A \mu x:A.\;c \rangle \leadsto c[e/x]
+        \end{gather*}
+
+        The term used in contradictions is normally something relatively complex that might already exist as an
+        assumption. Before starting the contradiction, \textbf{break down the RHS} as much as possible: the smaller the
+        thing you end up assuming for contradiction is, the more generally useful it is. For example:
+        \begin{gather*}
+        \prftree[r]{}
+        {
+            \prftree[r]{}
+            {...\textit{hard}...}
+            {\neg(\neg A \wedge \neg B);A \vee B \vdash \text{contr}}
+        }
+        {\neg(\neg A \wedge \neg B);\cdot \vdash A \vee B\text{ true}}
+        \qquad
+        \prftree[r]{}
+        {
+            \prftree[r]{}
+            {
+                \prftree[r]{}
+                {...\textit{way easier}...}
+                {\neg(\neg A \wedge \neg B);A \vee B \vdash \text{contr}}
+            }
+            {\neg(\neg A \wedge \neg B);\cdot \vdash A\text{ true}}
+        }
+        {\neg(\neg A \wedge \neg B);\cdot \vdash A \vee B\text{ true}}
+        \end{gather*}
+
+        Don't forget to use the \textbf{normal rules} like \(\vee\) and \(\wedge\).
+
+        To construct terms, normally easiest to prove the theorem using the logic, then mirror the tree in the syntax.
+        For example:
+        \begin{equation*}
+        \prftree[r]{}
+        {
+            \prftree[r]{}
+            {
+                \prfaxiom{A \wedge B;A\vdash A\wedge B\text{ true}}
+            }
+            {
+                \prftree[r]{}
+                {
+                    \prfaxiom{A \wedge B;A\vdash A\text{ false}}
+                }
+                {A \wedge B;A\vdash A\wedge B\text{ false}}
+            }
+            {A \wedge B;A\vdash \text{ contr}}
+        }
+        { A \wedge B;\cdot \vdash A\text{ true}}
+        \end{equation*}
+
+        A term proving this is then \(\mu u:A.\;\langle x \mid_{A \wedge B} \text{L }u \rangle\), where \(x\) is the
+        assumed proof of \(A \wedge B\). The typing derivation is:
+        \begin{equation*}
+        \prftree[r]{}
+        {
+            \prftree[r]{}
+            {
+                \prfaxiom{x:A \wedge B;u:A\vdash x: A\wedge B\text{ true}}
+            }
+            {
+                \prftree[r]{}
+                {
+                    \prfaxiom{x:A \wedge B;u:A\vdash u:A\text{ false}}
+                }
+                {x:A \wedge B;u:A\vdash \text{L }u : A\wedge B\text{ false}}
+            }
+            {x:A \wedge B;u:A\vdash \langle x \mid_{A \wedge B} \text{L }u \rangle \text{ contr}}
+        }
+        {x:A \wedge B;\cdot \vdash (\mu u:A.\;\langle x \mid_{A \wedge B} \text{L }u \rangle) : A\text{ true}}
+        \end{equation*}
+    }
+}
+\section{Embedding Classical Logic into Intuitionistic Logic}
+{
+    
+    Translating from the continuation language into STLC.
+
+    Pick an arbitrary proposition \(p\) to act as false. Define \(\sim X \stackrel{\text{def}}{=}X \rightarrow P\).
+
+    Can \textbf{translate} types from classical to intuitionistic using:
+
+    \begin{align*}
+    (\neg A)^\circ &= \sim A^\circ \\
+    \top^\circ     &= 1 \\
+    (A \wedge B)^\circ &= A^\circ \times B^\circ \\
+    \bot^\circ     &= p \\
+    (A \vee B)^\circ &= \sim\sim(A^\circ+B^\circ)
+    \end{align*}
+
+    Note that \(\sim\sim\sim X\) isn't \(X \rightarrow X \rightarrow X \rightarrow p\), it's \(((X \rightarrow p)
+    \rightarrow p) \rightarrow p\).
+
+    The type \(\neg\neg X \rightarrow X\) can't be translated into a constructive logic, but \(\sim\sim\sim X
+    \rightarrow \sim X\) can be (ignoring types for clarity):
+    \[ \text{tne} = \lambda f.\; \lambda a.\; f (\lambda g.\; g\;a) \]
+
+    We can construct a function \(\text{dne}_A : \sim\sim A^\circ \rightarrow A^\circ\) for every type \(A\) by using
+    tne and structural induction (as we're talking about propositional logic, we have to define it for all the infinite
+    types rather than quantifying):
+
+    \begin{alignat*}{2}
+    & \text{dne}_\top &&= \lambda q : 1.\; \langle\rangle \\
+    & \text{dne}_\bot &&= \lambda q : p.\; q\;(\lambda x.\;x) \\
+    & \text{dne}_{A \wedge B} &&= \lambda q : (A^\circ \times B^\circ).\; \langle \text{dne}_A(\text{fst }p), \text{dne}_B(\text{snd }q) \rangle \\
+    & \text{dne}_{A \vee B} &&= \lambda q:(\sim\sim\underbrace{\sim\sim(A^\circ \vee B^\circ)}_{(A \vee B)^\circ}).\;
+    \text{tne }q \\
+    & \text{dne}_{\neg A} &&= \lambda q : \sim\sim\underbrace{\sim A^\circ}_{(\neg A)^\circ}.\; \text{tne }q
+    \end{alignat*}
+
+}
+\section{Dependent Types}
+{
+
+    Types can include terms: merge the grammars, use judgements to decide if something is a type or a term.
+
+    \begin{alignat*}{5}
+    &\text{Terms } &&A,e &&::=\; &&x \mid \langle\rangle \mid 1 \mid \lambda x:A.\;e \mid \Pi x:A.\;B \mid e\;e' \mid \\
+    &&&&&&&\text{refl }e \mid \text{subst}[x:A.\;B](e,e') \mid (e=e':A) && \\
+    &\text{Contexts } &&\Gamma &&::=\; &&\cdot \mid \Gamma,x:A &&
+    \end{alignat*}
+
+    \begin{tabular}{l | l}
+    Judgement & Description \\
+    \hline
+    \(\Gamma\vdash A\text{ type}\) & \(A\) is a type \\
+    \(\Gamma\vdash e : A\) & \(e\) has type \(a\) \\
+    \(\Gamma\vdash A \equiv B\text{ type}\) & \(A\) and \(B\) are identical types \\
+    \(\Gamma\vdash e \equiv e' : A\) & \(e\) and \(e'\) are equal terms of type \(A\) \\
+    \(\Gamma\text{ ok}\) & \(\Gamma\) is a well-formed context
+    \end{tabular}
+
+    \vspace{5mm}
+
+    \begin{minipage}[t]{0.34\textwidth}
+    %\footnotesize
+    \centering
+    Type Formation
+    \begin{gather*}
+    \prftree[r]{}
+    {\Gamma\vdash 1\text{ type}}
+    \\
+    \\
+    \prftree[r]{}
+    {\Gamma\vdash A\text{ type}}
+    {\Gamma,x:A\vdash B\text{ type}}
+    {\Gamma\vdash\Pi x:A.\;B\text{ type}}
+    \\
+    \\
+    \prftree[r]{}
+    {\Gamma\vdash A\text{ type}}
+    {\Gamma\vdash e:A}
+    {\Gamma\vdash e;:A}
+    {\Gamma\vdash (e=e':A)\text{ type}}
+    \end{gather*}
+    \end{minipage}
+    \begin{minipage}[t]{0.65\textwidth}
+    %\footnotesize
+    \centering
+    Rules
+    \begin{gather*}
+    \prftree[r]{}
+    {\Gamma\vdash \langle\rangle : 1}
+    \qquad
+    \prftree[r]{}
+    {x:A \in \Gamma}
+    {\Gamma\vdash x : A}
+    \\
+    \\
+    \prftree[r]{}
+    {\Gamma\vdash A\text{ type}}
+    {\Gamma,x:A\vdash e:B}
+    {\Gamma\vdash (\lambda x:A.\;e) : (\Pi x:A.\;B)}
+    \qquad
+    \prftree[r]{}
+    {\Gamma\vdash e: (\Pi x:A.\;B)}
+    {\Gamma\vdash e':A}
+    {\Gamma\vdash e\;e' : B[e'/x]}
+    \\
+    \\
+    \prftree[r]{}
+    {\Gamma\vdash e:A}
+    {\Gamma\vdash \text{refl }e : (e = e : A)}
+    \\
+    \\
+    {
+        \small
+        \prftree[r]{}
+        {\Gamma\vdash A\text{ type}}
+        {\Gamma,x:A \vdash B\text{ type}}
+        {\Gamma\vdash e : (e_1=e_2 : A)}
+        {\Gamma\vdash e' : B[e_1/x]}
+        {\Gamma\vdash \text{subst}[x:A.\;B](e,e') : B[e_2/x]}
+    }
+    \\
+    \\
+    \prftree[r]{}
+    {\Gamma\vdash e : A}
+    {\Gamma\vdash A \equiv B\text{ type}}
+    {\Gamma\vdash e : B}
+    \end{gather*}
+    \end{minipage}
+
+    Also rules defining \(\equiv\) with normal equivalence relation rules, and congruence rules defining equality
+    between terms. Gives power to the final rule given above, as it allows computation \textit{within} types.
+
+}
+\section{Languages}
+{
+    \subsubsection*{Simply Typed Lambda Calculus}
+    {
+        \begin{alignat*}{4}
+        &\text{Types } &&X &&::= 1 \mid 0 \mid X \times Y \mid X + Y \mid X \rightarrow Y && \\
+        &\text{Terms } &&e &&::= x \mid \langle\rangle \mid \langle e,e \rangle \mid \text{fst } e \mid \text{snd } e
+        \mid \text{abort} \mid \text{L } e \mid \text{R } e \mid \text{case}(e,\text{L }x\rightarrow
+        e,\text{R}y\rightarrow e) \mid \lambda x:X.\;e \mid e\;e && \\
+        &\text{Contexts } &&\Gamma &&::= \cdot \mid \Gamma,x:X &&
+        \end{alignat*}
+
+        \begin{gather*}
+        \prftree[r]{(\(1_\text{I}\))}
+        {\Gamma\vdash\langle\rangle:1}
+        \qquad
+        \prftree[r]{(\(0_\text{E}\))}
+        {\Gamma\vdash e : 0}
+        {\Gamma\vdash\text{abort }e : X}
+        \qquad
+        \prftree[r]{(Hyp)}
+        {x:X \in \Gamma}
+        {\Gamma\vdash x : X}
+        \\
+        \\
+        \prftree[r]{(\(\rightarrow_I\))}
+        {\Gamma, x:X \vdash e : Y}
+        {\Gamma\vdash (\lambda x:X.\;e) : X \rightarrow Y}
+        \qquad
+        \prftree[r]{(\(\rightarrow_E\))}
+        {\Gamma\vdash e_1 : X \rightarrow Y}
+        {\Gamma\vdash e_2 : X}
+        {\Gamma\vdash e_1\;e_2 : Y}
+        \\
+        \\
+        \prftree[r]{(\(\times_\text{I}\))}
+        {\Gamma\vdash e_1 : X}
+        {\Gamma\vdash e_2 : Y}
+        {\Gamma\vdash\langle e_1,e_2 \rangle: X \times Y}
+        \qquad
+        \prftree[r]{(\(\times_\text{E1}\))}
+        {\Gamma\vdash e : X \times Y}
+        {\Gamma\vdash\text{fst }e : X}
+        \qquad
+        \prftree[r]{(\(\times_\text{E2}\))}
+        {\Gamma\vdash e : X \times Y}
+        {\Gamma\vdash\text{snd }e : Y}
+        \\
+        \\
+        \prftree[r]{(\(+_\text{I1}\))}
+        {\Gamma\vdash e : X}
+        {\Gamma\vdash \text{L }e : X + Y}
+        \qquad
+        \prftree[r]{(\(+_\text{I2}\))}
+        {\Gamma\vdash e : Y}
+        {\Gamma\vdash \text{R }e : X + Y}
+        \\
+        \\
+        \prftree[r]{(\(+_\text{E}\))}
+        {\Gamma\vdash e : X + Y}
+        {\Gamma,x:X\vdash e_1 : Z}
+        {\Gamma,y:Y\vdash e_2 : Z}
+        {\Gamma\vdash\text{case }(e, \text{L }x \rightarrow e_1,\text{R }y \rightarrow e_2) : Z}
+        \end{gather*}
+
+        The typed lambda calculi are total: all terms terminate as the types prevent the construction of a term like
+        \(\Omega\).
+
+        \subsection*{Intuitionistic Propositional Logic}
+        {
+            STLC is equivalent to IPL.
+
+            \begin{gather*}
+            \prftree[r]{}
+            {P\in\Psi}
+            {\Psi\vdash P\text{ true}}
+            \qquad
+            \prftree[r]{}
+            {\Psi\vdash\bot\text{ true}}
+            {\Psi\vdash R\text{ true}}
+            \qquad
+            \prftree[r]{}
+            {\Psi\vdash \top\text{ true}}
+            \\
+            \\
+            \prftree[r]{}
+            {\Psi\vdash P\text{ true}}
+            {\Psi\vdash P \vee Q\text{ true}}
+            \qquad
+            \prftree[r]{}
+            {\Psi\vdash Q\text{ true}}
+            {\Psi\vdash P \vee Q\text{ true}}
+            \qquad
+            \prftree[r]{}
+            {\Psi\vdash P \vee Q\text{ true}}
+            {\Psi,P\vdash R\text{ true}}
+            {\Psi,Q\vdash R\text{ true}}
+            {\Psi\vdash R\text{ true}}
+            \\
+            \\
+            \prftree[r]{}
+            {\Psi\vdash P \wedge Q\text{ true}}
+            {\Psi\vdash P \text{ true}}
+            \qquad
+            \prftree[r]{}
+            {\Psi\vdash P \wedge Q\text{ true}}
+            {\Psi\vdash Q \text{ true}}
+            \qquad
+            \prftree[r]{}
+            {\Psi\vdash P \text{ true}}
+            {\Psi\vdash Q \text{ true}}
+            {\Psi\vdash P \wedge Q\text{ true}}
+            \\
+            \\
+            \prftree[r]{}
+            {\Psi,P\vdash Q\text{ true}}
+            {\Psi\vdash P \Longrightarrow Q\text{ true}}
+            \qquad
+            \prftree[r]{}
+            {\Psi\vdash P \Longrightarrow Q\text{ true}}
+            {\Psi\vdash P\text{ true}}
+            {\Psi\vdash Q\text{ true}}
+            \end{gather*}
+
+            Negation is \textbf{derived}: \(\neg P \stackrel{\text{def}}{=}P\Longrightarrow\bot\). Refuting \(P\) means
+            proving that \(P\Longrightarrow\bot\).
+
+            Intuitionistic because there's no law of the excluded middle: \(\neg P\vee P\) does not hold, nor does
+            \(\neg\neg P\Longrightarrow P\).
+
+        }
+    }
+    \subsection*{Polymorphic Lambda Calculus/System F}
+    {
+
+        \begin{alignat*}{4}
+        &\text{Types } &&A &&::= \alpha \mid A \rightarrow A \mid \forall\alpha.\;A && \\
+        &\text{Terms } &&e &&::= x \mid \lambda x:X.\;e \mid e\;e \mid \Lambda\alpha.\;e \mid
+        e\;\alpha && \\
+        &\text{Type Contexts } &&\Theta &&::= \cdot \mid \Theta,\alpha && \\
+        &\text{Term Variable Contexts } &&\Gamma &&::= \cdot \mid \Gamma,x:X &&
+        \end{alignat*}
+
+        \begin{gather*}
+        \prftree[r]{}
+        {\alpha\in\Theta}
+        {\Theta\vdash \alpha \text{ type}}
+        \qquad
+        \prftree[r]{}
+        {\Theta\vdash A\text{ type}}
+        {\Theta\vdash B\text{ type}}
+        {\Theta\vdash A \rightarrow B \text{ type}}
+        \qquad
+        \prftree[r]{}
+        {\Theta,\alpha\vdash A \text{ type}}
+        {\Theta\vdash \forall\alpha.\;A \text{ type}}
+        \\
+        \\
+        \prftree[r]{}
+        {\Theta\vdash \cdot \text{ ctx}}
+        \qquad
+        \prftree[r]{}
+        {\Theta\vdash \Gamma \text{ ctx}}
+        {\Theta\vdash X \text{ type}}
+        {\Theta\vdash \Gamma,x:X \text{ ctx}}
+        \end{gather*}
+
+        Types can have free variables, so we need to ensure types are well-scoped (\(\Theta\vdash A\text{ type}\)). We
+        then need judgements to ensure that type contexts are well-formed (\(\Theta\vdash\Gamma\text{ ctx}\)) as they
+        contain types, which have a well-formedness condition.
+
+        \begin{gather*}
+        \prftree[r]{}
+        {x:A \in \Gamma}
+        {\Theta;\Gamma\vdash x:A}
+        \\
+        \\
+        \prftree[r]{}
+        {\Theta\vdash A\text{ type}}
+        {\Theta;\Gamma,x:A\vdash e : B}
+        {\Theta;\Gamma\vdash (\lambda x:A.e) : A \rightarrow B}
+        \qquad
+        \prftree[r]{}
+        {\Theta;\Gamma\vdash e : A \rightarrow B}
+        {\Theta;\Gamma\vdash e' : A}
+        {\Theta;\Gamma\vdash e\;e' : B}
+        \\
+        \\
+        \prftree[r]{}
+        {\Theta,\alpha;\Gamma\vdash e : B}
+        {\Theta;\Gamma\vdash \Lambda\alpha.\;e : \forall\alpha.\;B}
+        \qquad
+        \prftree[r]{}
+        {\Theta\vdash A\text{ type}}
+        {\Theta;\Gamma\vdash e : \forall\alpha.\;B}
+        {\Theta;\Gamma\vdash a\;A : B[A/\alpha]}
+        \end{gather*}
+
+        Important that whenever we're dealing with a type or a context, we have an appropriate well-formedness condition
+        around: all theorems using \(A\) should also include \(\Theta\vdash A\text{ type}\), etc.
+
+        \subsection*{Second-Order Intuitionistic Logic}
+        {
+            PLC is equivalent to SIL: but we don't know SIL, so that's... great.
+        }
+    }
+}
+\section{Proofs}
+{
+    \subsubsection*{Progress: let bindings}
+    {
+        If \(\cdot \vdash e : \tau\) then either \(e\) is a value or \(\exists e'.\; e \leadsto e'\).
+
+        By structural induction on \(\vdash\):
+
+        \begin{adjustwidth}{5mm}{0mm}
+            \dots
+    
+            Case \(\prftree[r]{(let)}{\Gamma\vdash e_1 : t'}{\Gamma,x:t'\vdash e_2 : t}{\Gamma\vdash \text{let }x =
+            e_1 \text{ in } e_2 : t}\):
+
+            \begin{adjustwidth}{5mm}{0mm}
+                Assume \(\cdot\vdash e_1 : t'\) and \(x:t' \vdash e_2 : t\) from the top of the rule. Progress holds for
+                them as they're subderivations.
+
+                RTP Progress, so assume \(\cdot \vdash \text{let }x = e_1 \text{ in } e_2 : t\) and need to prove that
+                the let-binding is either a value or that it steps.
+                
+                Using Progress on \(e_1\), either \(e_1\) is a value or \(\exists e_1'.\; e_1 \leadsto e_1'\).
+
+                Case \(e_1\) is a value:
+                \begin{adjustwidth}{5mm}{0mm}
+                    By \(\prftree[r]{(op-let-1)}{\text{let }x = e_1 \text{ in } e_2 \leadsto e_2[e_1/x]}\), \(\text{let
+                    }x = e_1 \text{ in } e_2 \leadsto e_2[e_1/x]\).
+                \end{adjustwidth}
+
+                Case \(\exists e_1'.\;e_1 \leadsto e_1'\):
+                \begin{adjustwidth}{5mm}{0mm}
+                    By \(\prftree[r]{(op-let-2)}{e_1 \leadsto e_1'}{\text{let }x = e_1 \text{ in } e_2 \leadsto
+                    \text{let }x = e_1' \text{ in } e_2}\), \(\text{let }x = e_1 \text{ in } e_2 \leadsto \text{let }x =
+                    e_1' \text{ in } e_2\).
+                \end{adjustwidth}
+            \end{adjustwidth}
+
+            \dots
+        \end{adjustwidth}
+    }
+}
+\end{document}
