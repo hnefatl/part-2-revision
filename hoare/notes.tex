@@ -1,0 +1,33 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2cm]{geometry}
+\usepackage{prftree}
+\usepackage{changepage}
+
+\title{\vspace{-1cm}Hoare Logic and Model Checking\vspace{-1cm}}
+\author{}
+\date{}
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{2mm}
+
+% Make ~ look more normal
+\let\oldsim\sim 
+\renewcommand{\sim}{{\oldsim}}
+
+\begin{document}
+\maketitle
+\section*{\texttt{while} Language}
+{
+    \begin{alignat*}{2}
+    C ::=& \; &\;&\text{skip} \\
+         & | &&C_1 ; C_2 \\
+         & | &&X := E \\
+         & | &&\text{if }B\text{ then }C_1\text{ else }C_2 \\
+         & | &&\text{while }B\text{ do }C
+    \end{alignat*}
+}
+\end{document}
