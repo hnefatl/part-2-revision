@@ -10,6 +10,7 @@
 \usepackage{enumitem}
 \usepackage{minted}
 \usepackage{graphicx}
+\usepackage{wrapfig}
 
 \title{\vspace{-2.5cm}CompArch\vspace{-2cm}}
 \author{}
@@ -129,7 +130,7 @@
         \item Hardware interlock: pipeline stalls when hazards are detected.
         \end{itemize}
 
-        \textit{Control Hazards} can sometimes be avoided by branch prediction. In the simplest pipeline, just stall the fetches until the outcome of the branch is known. For simple tests (\(r = 0\)), could move test and target-address calculation into the decode stage. Requires dedicated hardware and logic for switching to, but reduces the branch delay slot by 1 cycle.
+        \textit{Control Hazards} can sometimes be avoided by branch prediction. In the simplest pipeline, just stall the fetches until the outcome of the branch is known. For simple tests (\(r = 0\)), could move test and target-address calculation into the decode stage. Requires dedicated hardware and logic for switching to, but reduces the branch delay slot by 1 cycle. Can embrace the branch delay slot and force compilers to place an instruction there.
     }
     \subsection*{Exceptions}
     {
@@ -159,7 +160,226 @@
     }
     \subsection*{Branch Prediction}
     {
-        138g
+        \begin{itemize}
+        \item Condition codes: branch instructions have attached flags for the ALU (test against 0, allow overflow, ...)
+        \item Condition registers: comparison operations store results in a given register, branches use those.
+        \item Compare-and-branch: comparison and branch within a single instruction (Java bytecode).
+        \end{itemize}
+
+        \subsubsection*{Static Predictor}
+        {
+            Always guess `branch hit' or `branch miss'. Can improve results by allowing branch instructions to be tagged with a bias bit, that changes which way the processor guesses. Bit can be set by compiler, maybe using a profiling run to get an approximate distribution.
+        }
+        \subsubsection*{One-level Predictor}
+        {
+            Use a table of registers, indexed by a portion of the \textit{address of the branch}. 1 bit entries store taken/not taken. 2-bit entries can use a counter, to add a bit more consistency. Any more than 2 bits aren't much more effective.
+
+            Don't care about collisions in the table as prediction is inaccurate anyway.
+        }
+        \subsubsection*{Two-level Predictor}
+        {
+            Local-history two-level predictors use a table of shift registers (history registers, like 01101) storing the branch's latest taken/not-takens. Also keep a table per branch, indexed by that branch's history register with entries being 2-bit counters like above.
+
+            First level is the shift register holding a branch's history. Second level is using that history register to look up the prediction.
+
+            Global history predictor uses a single shift register to hold the global history of branches, rather than a specific hash of them. Second level is the same, just the first level is less interesting.
+
+            \textit{Check in supo notes that Daniel agreed with the global predictor definition.}
+        }
+        \subsubsection*{Tournament Predictor}
+        {
+            Local and Global predictors are effective in different cases. Use both, and pick whichever has been most accurate for a specific branch in the past.
+        }
+        \subsubsection*{Limits}
+        {
+            \begin{itemize}
+            \item Need a training period of low accuracy before predictors get up to speed.
+            \item Will always be malicious inputs.
+            \item Can be very expensive to implement (two big tables for each branch...)
+            \item Using hashing on the branch PC, so can have negative/positive/neutral aliasing of branches.
+            \end{itemize}
+        }
+        \subsubsection*{Branch Target Buffer/\textbf{Cache}}
+        {
+            \begin{minipage}[t]{0.7\textwidth}
+            \vspace{0pt}
+            As well as predicting whether a branch will be taken, can also predict where it'll go: if we predict it being taken, save time working out the destination.
+
+            Keep a table indexed by the branch address with entries being cached target addresses.
+
+            All this happens during instruction fetch, so if we guess correctly on branch prediction and the cached value is correct, we don't incur \textbf{any} branch penalty.
+            \end{minipage}
+            \begin{minipage}[t]{0.29\textwidth}
+            \vspace{0pt}
+            \includegraphics[width=\textwidth]{btb.png}
+            \end{minipage}
+        }
+        \subsubsection*{Return Address Predictors}
+        {
+            Functions can be called from all over the place so predictions are normally inaccurate.
+
+            Just store a stack of PCs from before branches.
+        }
+        \subsubsection*{Avoiding Branches}
+        {
+            ARM conditional instructions allow transforming control dependencies (branches) into data dependencies (normal instructions with conditional flags). End up with nullified pipeline instructions but will never have to flush the pipeline. Only works for simple branches where it's worth inlining. In the end, branch prediction is just accurate enough that this is unnecessary.
+        }
+    }
+}
+\section*{Superscalar Processors}
+{
+    Exploit instruction-level parallelism (ILP) to replace stalls with instructions.
+
+    \subsection*{Superpipelined}
+    {
+        Further subdivide pipeline macro-stages into \(M\) micro-stages that \textbf{all do the same thing}: each clock allows for \(M\) instructions to complete.
+
+        \textit{Check supo notes for why superparallel isn't used.}
+
+        Reminder that pipeline stages can be divided as far as we want: the 5-stage pipeline is human-friendly but each stage can be divided into subtasks arbitrarily.
+    }
+    \subsection*{Superscalar}
+    {
+        \begin{center}
+        \includegraphics[width=0.8\textwidth]{out-of-order.png}
+        \end{center}
+
+        Run \(P\) pipelines in parallel. \(\text{IPC} \leq P\), clock period stays the same as in a pipelined processor.
+
+        Upper limit on ILP is due to true data dependencies. Can exceed even this by using special multi-input or extra-fast functional units to run multiple cheap instructions within a cycle (eg.\ \texttt{ADD}).
+
+        \textbf{Processor can't sustain an execution rate faster than the fetch rate}.
+
+        \subsubsection*{Fetch Techniques}
+        {
+            Need multi-ported instruction caches for fetching up to \(P\) instructions per cycle. Can be complex if the instructions don't \textbf{align} with the cache lines (eg.\ we fetch 4 instructions starting from 2 when the cache lines start from 0, 4, ...).
+        }
+        \subsubsection*{Register Renaming}
+        {
+            Can reduce the effects of name dependencies (using the same register) by having a large set of \textbf{physical registers} which are mapped onto by the \textbf{architectural registers} which are exposed to the program.
+
+            The rename stage keeps a list of free registers and the current mapping from architectural to physical registers and rewrites instructions just before they enter the out-of-order portion of the pipeline.
+            
+            Output registers are \textbf{always renamed}, as otherwise we're not actually helping hide name dependencies. Essentially rewrites into SSA form.
+        }
+        \subsubsection*{Out-of-order execution}
+        {
+            Compiler is often unable to schedule instructions optimally as it can't disambiguate memory addresses, can't predict branches, works with a limited number of registers.
+
+            Maintain a buffer of instructions waiting to execute. Issue instructions from the buffer in any order once they're ready to execute (all operands are available and a functional unit is free).
+
+            When an instruction is scheduled, its destination register is marked as ready for during the next cycle, so subsequent instructions can get scheduled.
+
+            Usually want to schedule loads as early as possible, as they take a long time and often free up lots of other instructions.
+
+            \begin{itemize}
+            \item Load Bypassing: execute loads before stores \textbf{if they access different memory locations}.
+            \item Store-to-Load Forwarding: if a load reads from the same location as a store, just forward the stored value to the load instruction -- completely skip memory read.
+            \item Load-to-Load Forwarding: forward data from an earlier read to a later one.
+            \end{itemize}
+        }
+        \subsubsection*{Load/Store Queues}
+        {
+            \begin{wrapfigure}{R}{0.4\textwidth}
+            \centering
+            \includegraphics[width=0.35\textwidth]{load-store-queues.png}
+            \end{wrapfigure}
+            Inbetween execute and memory access, keep two queues for load/store instructions. Each queue is in program order, indexed by the instruction address and containing the instruction. Operands might not have been calculated (queue could contain \texttt{4: STORE 3 0x...} and \texttt{5: STORE 4 ?}, where \texttt{?} will get updated when the out-of-order address calculation happens).
+
+            Stores can't be undone, so need to ensure that exceptions from earlier instructions are handled before performing a store, as well as that any speculation (of data or branch) has been confirmed.
+
+            \begin{itemize}
+            \item Always execute store instructions in program order: never reorder. Ensures that exceptions and mispredicted branches are handled.
+            \item Before performing a load (moving it out of the load queue), search the store queue for a store to the same memory location. If there's a matching (youngest) store, skip the memory read and just use the value that's going to be stored (store-to-load forwarding). Stores might not have addresses calculated, so we need to treat loads as speculative (might get rolled back later).
+            \item When a store address is calculated, update the instruction in the store queue and search the load queue for speculative loads to the same address -- need to roll them back.
+            \end{itemize}
+
+            Load/Store Queues are expensive as they compare wide memory addresses and need to be content-addressable, and usually multi-ported.
+        }
+        \subsubsection*{Avoiding Load/Store Queues}
+        {
+            Alternate approach: disallow store-to-load forwarding, and just flush the pipeline when out-of-order store/load instructions are detected to have been performed out of order.
+
+            Use a hash table of counters indexed by accessed addresses to detect problems: increment the counter when a load is issued and decrement it on commit. If a store commits and the counter is non-zero, flush and restart the pipeline.
+        }
+    }
+    \subsection*{Precise Exceptions and Rollbacks}
+    {
+        Exceptions are detected when processing one instruction in the instruction window, some of which have been performed and some not. Should only allow commits if no potential for an exception.
+
+        \subsubsection*{The Reorder Buffer}
+        {
+            Keep an array of \textbf{register results} (not instructions) at the end of the pipeline in program order, the relevant slot being updated when an instruction executes. When all earlier instructions have completed, commit the results to the architectural register file.
+
+            When committing, if we detect a mispredicted branch or exception we just clear the reorder buffer and restart the pipeline.
+
+            Now have \textbf{two locations} for register contents: when an instruction uses operands, need to look in the reorder buffer for the youngest change to the register, and if it's not present, fall back to the real architectural register file.
+        }
+        \subsubsection*{Unified Register File}
+        {
+            \begin{wrapfigure}{R}{0.4\textwidth}
+            \centering
+            \includegraphics[width=0.4\textwidth]{unified-register-file.png}
+            \end{wrapfigure}
+
+            Use a single large register files instead of an auxiliary buffer, and use two mapping tables: each table is the state of a register-renaming.
+
+            \begin{itemize}
+            \item Front-end table is used by all running instructions and provides the latest speculative register values.
+            \item Back-end table is the correct, committed mapping.
+            \end{itemize}
+
+            When there's an exception or misprediction, can just directly copy the back-end table over the front-end table to replace the speculative registers.
+
+            Need an in-order queue representing instructions, holding the architectural and physical registers, as well as the old physical register for freeing up.
+        }
+    }
+    \subsection*{Limits}
+    {
+        Diminishing returns from exploiting ILP when pipelines get wide. Complexity of the pipeline multiplied, so harder to optimise and verify.
+
+        Requires high instruction fetch rate, imposes knock-on performance requirements on other components. Still centralised, so doesn't scale well.
+    }
+}
+\section*{VLIW}
+{
+    \textbf{Very Large Instruction Width} processors move the scheduling complexity out of the processor and into the compiler.
+
+    Idea is to use an ISA which supports packing a number of independent instructions into a single long instruction. Each slot in the instruction has a fixed function (integer op, load/store, floating-point, ...).
+
+    Latency subtleties come into play: operations have different durations, so the compiler is forced to assume worst-case delay for each (assume eg. 3 instruction delay before memory ops are completed). If an operation takes longer (cache miss), the pipeline is just stalled.
+
+    \subsection*{Local Scheduling}
+    {
+        Scheduling within a basic block has limited ILP (less than 2 normally). Basic blocks are typically 5 instructions long (branch every 5 instructions).
+    }
+    \subsection*{Global Scheduling}
+    {
+        \begin{wrapfigure}{R}{0.4\textwidth}
+        \centering
+        \includegraphics[width=0.37\textwidth]{software-pipelining.png}
+        \end{wrapfigure}
+
+        Investigate compiler technique for scheduling outside basic blocks. Loops are prime candidates as iterations are often independent and the common-case for programs is inside loops.
+
+        \subsubsection*{Loop Unrolling}
+        {
+            Replicate the loop body multiple times and change the loop condition to match. Adjust memory access offsets to account for being in a different block. Increases the size of the basic block in the loop body, so higher ILP inside the body.
+
+            Requires some setup/teardown where there's very limited ILP (eg.\ need to load/store values before starting/finishing and there's no non-memory operations we can do in the meantime).
+        }
+        \subsubsection*{Software Pipelining}
+        {
+            Overlap different iterations of the loop so that we avoid the setup/teardown associated with loop unrolling. Each VLIW instruction has a slot filled by each iteration.
+
+            Register renaming can get difficult if we need a result computed by an old iteration, as the register will get overwritten.
+
+            \begin{itemize}
+            \item Can add explicit register moves to store the results we need.
+            \item Can do unrolling first, to make the kernel larger and bring the result into scope.
+            \item Use a \textbf{Rotating Register File}: each iteration of the loop gets a fresh set of registers.
+            \end{itemize}
+        }
     }
 }
 \end{document}
