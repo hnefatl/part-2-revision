@@ -383,16 +383,19 @@
 
         \subsubsection*{Trace Scheduling}
         {
-            \begin{wrapfigure}{R}{0.4\textwidth}
-            \centering
-            \includegraphics[width=0.37\textwidth]{trace-scheduling.png}
-            \end{wrapfigure}
-
+            \begin{minipage}[t]{0.55\textwidth}
             Focus on the common case: find the most likely \textbf{path} through the basic block graph using eg.\ annotated code/profiling, and name it the \textbf{trace}.
 
             The trace has side entrances and exits, caused by branches of other paths leading into the most probable one or branches moving us off the trace.
 
             Can optimise instruction layout within the trace rather than globally, then insert book-keeping instructions to compensate for the code motion when we move into/out of the trace. Moving in and out is expensive, but following the trace directly has a very high ILP.
+            \end{minipage}
+            \hspace{5mm}
+            \begin{minipage}[t]{0.4\textwidth}
+            \vspace{0pt}
+            \centering
+            \includegraphics[width=\textwidth]{trace-scheduling.png}
+            \end{minipage}
         }
     }
     \subsection*{Conditional Instructions}
@@ -400,8 +403,46 @@
         Conditional instructions are effective for VLIW as they can fill slots in instructions that would otherwise be blank, even if they don't end up being executed.
     }
 }
-\section*{Multithreaded Processors}
+\section*{Multithreaded Processors: \textbf{Concurrency}}
 {
+    \begin{wrapfigure}{R}{0.6\textwidth}
+    \centering
+    \includegraphics[width=0.57\textwidth]{multithreading-summary.png}
+    \end{wrapfigure}
+    
+    Not parallelism, just running multiple threads on the same core. Often care about throughput over performance of a single thread, ie.\ in server workloads.
 
+    ILP is relatively fine-grained parallelism: ensuring we get maximal throughput of instructions. TLP is coarser, based on independent workloads.
+
+    \subsection*{Coarse-grained Multithreading}
+    {
+        Switch to an alternative thread when the active thread stalls (cache miss, IO, ...). Aim is to hide cache miss penalties and maintain higher utilisation.
+
+        On a switch, we flush the pipeline, store any state, reload the new state, and start fetching new instructions. Need to ensure side-effects of currently executing instructions are either saved or rolled back.
+
+        \begin{itemize}
+        \item Shorter pipelines reduce thread switch penalty, as we don't need to refill the pipeline as much.
+        \item Can use a \textbf{thread-switch buffer} to store a few instructions from each thread to avoid instruction cache misses. 
+        \item \textbf{Pipeline registers} on each pipeline stage can hold in-execution state for a few threads at a time, then swap them in and out of the main pipeline quickly. Prevents the need to refill the pipeline.
+        \end{itemize}
+    }
+    \subsection*{Fine-grained Multithreading}
+    {
+        A new thread is selected on each clock cycle: different instructions in the pipeline belong to different threads. Use eg.\ round robin to select threads.
+
+        Static thread schedules can be wasteful if there aren't many threads, but can simplify dependency-handling logic: if we know the spacing between each thread, we can remove eg.\ data-forwarding.
+
+        Fine-grained multiprocessors without caches can provide strict and predictable performance guarantees, compared to a pipeline processor with caches and coarse thread-switching.
+
+        Can use dynamic thread-selection policies, or avoid switching to stalled threads, etc.
+    }
+    \subsection*{Simultaneous Multithreading}
+    {
+        Superscalar processors with multithreading and out-of-order execution can allow for instructions from different threads to be in-flight simultaneously.
+    }
+}
+\section*{Caches}
+{
+    %pg319
 }
 \end{document}
