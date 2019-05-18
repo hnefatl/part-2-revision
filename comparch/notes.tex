@@ -351,16 +351,12 @@
 
     \subsection*{Local Scheduling}
     {
-        Scheduling within a basic block has limited ILP (less than 2 normally). Basic blocks are typically 5 instructions long (branch every 5 instructions).
-    }
-    \subsection*{Global Scheduling}
-    {
         \begin{wrapfigure}{R}{0.4\textwidth}
         \centering
         \includegraphics[width=0.37\textwidth]{software-pipelining.png}
         \end{wrapfigure}
 
-        Investigate compiler technique for scheduling outside basic blocks. Loops are prime candidates as iterations are often independent and the common-case for programs is inside loops.
+        Scheduling within a basic block has limited ILP (less than 2 normally). Basic blocks are typically 5 instructions long (branch every 5 instructions).
 
         \subsubsection*{Loop Unrolling}
         {
@@ -381,5 +377,31 @@
             \end{itemize}
         }
     }
+    \subsection*{Global Scheduling}
+    {
+        Can move instructions between basic blocks to increase ILP, but it's complex: the state space is huge and finding an approximately optimal solution is expensive.
+
+        \subsubsection*{Trace Scheduling}
+        {
+            \begin{wrapfigure}{R}{0.4\textwidth}
+            \centering
+            \includegraphics[width=0.37\textwidth]{trace-scheduling.png}
+            \end{wrapfigure}
+
+            Focus on the common case: find the most likely \textbf{path} through the basic block graph using eg.\ annotated code/profiling, and name it the \textbf{trace}.
+
+            The trace has side entrances and exits, caused by branches of other paths leading into the most probable one or branches moving us off the trace.
+
+            Can optimise instruction layout within the trace rather than globally, then insert book-keeping instructions to compensate for the code motion when we move into/out of the trace. Moving in and out is expensive, but following the trace directly has a very high ILP.
+        }
+    }
+    \subsection*{Conditional Instructions}
+    {
+        Conditional instructions are effective for VLIW as they can fill slots in instructions that would otherwise be blank, even if they don't end up being executed.
+    }
+}
+\section*{Multithreaded Processors}
+{
+
 }
 \end{document}
