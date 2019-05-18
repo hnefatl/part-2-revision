@@ -443,6 +443,71 @@
 }
 \section*{Caches}
 {
-    %pg319
+    \begin{minipage}[t]{0.4\textwidth}
+    Can use software-controlled caches/scratchpads for realtime systems, or hardware managed caches. Smaller is faster.
+
+    Unified cache is data+instructions combined (level 2+), level 1 is separated caches. Separated isn't just faster, also means \textbf{can access instructions and data at the same time}.
+
+    \textbf{Block = Cache Line}
+
+    \subsection*{Direct Mapped Cache}
+    {
+        Each block can only live in one place in the cache: the block address `mod' the number of blocks in the cache. Fast, but suffers from collisions: cache lines are evicted even when there are free entries.
+
+        Middle bits (index) are used as index into the cache. Low bits (offset) are used as cache line index. High bits (tag) are used to check for validity.
+    }
+    \end{minipage}
+    \hspace{5mm}
+    \begin{minipage}[t]{0.55\textwidth}
+    \vspace{0pt}
+    \centering
+    \includegraphics[width=\textwidth]{direct-cache.png}
+    \end{minipage}
+    \subsection*{Set Associative}
+    {
+        For an \(n\)-way set associative cache, store \(n\) sets/ways of blocks, each set/way being addressable by the index. Look up the line in all ways at the same time, and report whichever holds it.
+
+        Can be the fastest type of cache.
+    }
+    \subsection*{Fully Associative Cache}
+    {
+        Can further divide memory into ways to get a highly- or fully-associative cache, but it's inefficient.
+
+        Content Addressable Memories return addresses of data given the data.
+    }
+    \subsection*{Block Replacement}
+    {
+        Always replace blocks in a direct-mapped cache, but set-associative and fully associative need policies.
+
+        Least Recently Used takes advantage of temporal locality, but can be expensive to implement. Random performs well on average, approximate LRU schemes exist.
+    }
+    \subsection*{Write Policies}
+    {
+        \begin{itemize}
+        \item Write Through: write to cache and higher-level memory.
+        \item Write Back: only write modified cache blocks when they're evicted.
+        \end{itemize}
+
+        If data isn't in the cache when we write to a memory address:
+        \begin{itemize}
+        \item Allocate Write: read the data into cache, then overwrite it.
+        \item No Allocate Write: don't load lines to the store (lines are only loaded on a read miss).
+        \end{itemize}
+
+        Usually write-through + allocate-write and write-back + no-allocate-write.
+
+        Inclusive caches ensure that addresses in higher-level memory are a superset of address in lower-level memory. Exclusive caches don't enforce this.
+    }
+    \subsection*{Cache Misses}
+    {
+        The three reasons for cache misses (the three C's):
+
+        \begin{itemize}
+        \item \textbf{Compulsory}: A compulsory miss happens when a block is brought into the cache for the first time.
+        \item \textbf{Capacity}: A capacity miss occurs when the number of blocks exceeds the capacity of the cache.
+        \item \textbf{Conflict}: Direct mapped and set-associative caches suffer conflict misses on collisions.
+        \end{itemize}
+    }
+    % pg346
 }
 \end{document}
