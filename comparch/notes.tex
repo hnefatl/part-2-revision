@@ -576,8 +576,169 @@
         Use wide registers (eg.\ 128 bit scalar) as a short vector (8 16-bit values). Special FUs for processing them.
     }
 }
-\section{Chip Multiprocessors}
+\section*{Chip Multiprocessors}
 {
-    
+    \subsection*{Cache Coherence}
+    {
+        Ensuring multiple cores can't see different values at a memory location at the same time (if one core writes and it gets stuck in cache and not written back to memory).
+
+        Write-through caches are easy, as we can always get the latest value from memory. However, as each write generates bus traffic, they scale badly. Write-back caches are more commonly used on multiprocessors.
+
+        \subsubsection*{MSI}
+        {
+            \begin{minipage}[t]{0.35\textwidth}
+            Write-back invalidation protocol.
+            \end{minipage}
+            \begin{minipage}[t]{0.6\textwidth}
+            \vspace{0pt}
+            \centering
+            \includegraphics[width=\textwidth]{msi.png}
+            \end{minipage}
+        }
+        \subsubsection*{MESI}
+        {
+            \begin{minipage}[t]{0.35\textwidth}
+            Add an Exclusive state, where we're the only cache containing the block \textbf{and we've not modified it}. As soon as it's modified, we switch into the modified state, but we can read in the Exclusive state without any transitions.
+
+            More effective than MSI in multi-processor environments, as we can modify blocks owned exclusively by us without touching the bus.
+            \end{minipage}
+            \begin{minipage}[t]{0.55\textwidth}
+            \vspace{0pt}
+            \centering
+            \includegraphics[width=\textwidth]{mesi.png}
+            \end{minipage}
+        }
+        \subsubsection*{Directory-based Cache Coherence}
+        {
+            Snoopy buses don't scale well, as transactions are broadcast to all caches.
+
+            Directory-based protocols use a `directory' responsible for arbitrating access to each block of the cache. Processors send requests for access to the directory. The directory keeps track of the owner and sharers.
+        }
+    }
+    \subsection*{Cache Consistency}
+    {
+        Consistency restricts the order in which memory operations from one core are seen by others: the order in which loads/stores become visible.
+
+        \subsubsection*{Sequential Consistency}
+        {
+            Each core must preserve the program order of loads/stores.
+
+            Implemented speculatively, as full preservation is inefficient. Memory operations to different locations make no semantic difference to sequential consistency, so can be reordered.
+
+            Very easy to break: write buffers allow loads to overtake stores, and non-blocking read operations from out-of-order or speculative execution.
+        }
+        \subsubsection*{Total Store Order}
+        {
+            Allow \textbf{loads to overtake stores}: doesn't make much semantic difference for most programs but allows for write buffers, so faster than sequential consistency.
+
+            Programmers can use memory fence instructions if they need to enforce loads before stores.
+        }
+    }
+}
+\section*{Interconnects}
+{
+    \begin{minipage}[t]{0.6\textwidth}
+    Some interconnects are bidirectional (bus, ring, by virtue of being broadcast). Others are unidirectional, so bidirectional communication requires twice the wiring (crossbar).
+
+    \subsection*{Bus Network}
+    {
+        \textbf{Broadcast}, all nodes can read. Centralised arbiter provides access to bus.
+    }
+    \subsection*{Ring Network}
+    {
+        Point-to-point interconnects to form a ring between nodes.
+
+        Supports concurrent data transfer, can still broadcast but nodes need to help forward.
+
+        Centralised or distributed control, but may need deadlock prevention with distributed.
+
+        Routers at each node are trivial.
+    }
+    \end{minipage}
+    \hspace{5mm}
+    \begin{minipage}[t]{0.35\textwidth}
+    \vspace{0pt}
+    \centering
+    \includegraphics[width=\textwidth]{crossbar.png}
+    \end{minipage}
+    \subsection*{Crossbar Network}
+    {
+        Can directly connect any input to any output, without intermediate stages and without rearranging existing connections.
+
+        Very expensive, as it's quadratic cost with number of inputs/outputs.
+    }
+    \subsection*{General}
+    {
+        \textbf{Modules}: processor cores, caches, etc. Connect to the network at terminals.
+
+        \textbf{Nodes}: Switches/routers, \textbf{not necessarily cores/caches}. Linked by \textbf{channels}.
+
+        \textbf{Direct Networks}: Each node is also a terminal (all caches etc. are routers as well).
+
+        \textbf{Indirect Networks}: Nodes are either terminals or switches (not both).
+
+        \textbf{Diameter}: The greatest minimal hop-count between all pairs of \textbf{terminals} in the network.
+
+        \textbf{Packet}: Higher-level message between network clients. Comprised of \textbf{flits} (flow-control digits), the smallest unit of information recognised by the flow-control method.
+
+        \textbf{Bisection Width}: Minimum number of wires that must be cut to divide the network into two equal-sized sets of nodes. The bandwidth over the bisection is the \textbf{bisection bandwidth}.
+    }
+    \subsection*{Mesh Topology}
+    {
+        Each node has a channel to the nearest neighbour. Easy to map to the physical die.
+
+        Potentially high hop count (diameter is \(2(n-1)\)).
+    }
+
+    \begin{minipage}[t]{0.8\textwidth}
+    \subsection*{Concentrated Mesh Topology}
+    {
+        Increase mesh scalability by clustering terminals around each node.
+
+        Average hop count decreases, so latency drops. Lower bisection bandwith.
+    }
+    \subsection*{Torus}
+    {
+        Doubles the bisection bandwidth of a mesh, and reduces the load of the central channels.
+    }
+    \subsection*{Hierarchical Networks}
+    {
+        Eg. use low-latency crossbar for local communication between a processor and its private caches where scalability is fixed, then a global mesh network for connected processors.
+    }
+    \end{minipage}
+    \hspace{5mm}
+    \begin{minipage}[t]{0.15\textwidth}
+    \vspace{0pt}
+    \includegraphics[width=\textwidth]{concentrated-mesh.png}
+    \includegraphics[width=\textwidth]{torus.png}
+    \end{minipage}
+    \subsection*{Flow Control}
+    {
+        \subsubsection*{Circuit Switching}
+        {
+            Reservation of a circuit, without overhead on each message. Channels often shared by multiple circuits using TDMA or similar.
+
+            If lots of short packets need to be sent to different destinations, the setup/teardown overhead is significant.
+        }
+        \subsubsection*{Packet Switching}
+        {
+            Different approaches to packet buffering on the on-chip switches and routers. Remember that the data being sent is flits, partial packets.
+
+            \begin{itemize}
+            \item \textbf{Store-and-Forward}: Buffer the entire packet then retransmit.
+            \item \textbf{Cut-Through}: Wait for there to be enough space for the full packet in the destination buffer, then transmit what we get as soon as we have it (don't buffer it all before sending on).
+            \item \textbf{Wormhole}: Send flits as soon as they're received. Like Cut-Through except we only need a single flit of space rather than a whole packet.
+            \end{itemize}
+        }
+    }
+    \subsection*{Routing}
+    {
+        Usually simple deterministic routing protocols: channels don't go down, can be pre-programmed (although it then fails to deal with high load).
+
+        \begin{itemize}
+        \item \textbf{XY Routing}: Forward along then down in a mesh. Can avoid deadlock by restricting turn directions.
+        \item \textbf{Dynamic Routing}: Gather network information and change routes.
+        \end{itemize}
+    }
 }
 \end{document}
