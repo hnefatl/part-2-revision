@@ -790,6 +790,8 @@
 
     Types can include terms: merge the grammars, use judgements to decide if something is a type or a term.
 
+    Some terms constitute proofs: \(\text{refl }e\) is a proof that \textit{something}?
+
     \begin{alignat*}{5}
     &\text{Terms } &&A,e &&::=\; &&x \mid \langle\rangle \mid 1 \mid \lambda x:A.\;e \mid \Pi x:A.\;B \mid e\;e' \mid \\
     &&&&&&&\text{refl }e \mid \text{subst}[x:A.\;B](e,e') \mid (e=e':A) && \\

@@ -450,6 +450,8 @@
 
     \textbf{Block = Cache Line}
 
+    Low associativity is fast but bad because there's only one place for each block, so evictions are frequent. High associativity is good because we search caches in parallel which is fast and allows multiple blocks (expensive hardware). Fully associative is normally bad.
+
     \subsection*{Direct Mapped Cache}
     {
         Each block can only live in one place in the cache: the block address `mod' the number of blocks in the cache. Fast, but suffers from collisions: cache lines are evicted even when there are free entries.
@@ -463,17 +465,17 @@
     \centering
     \includegraphics[width=\textwidth]{direct-cache.png}
     \end{minipage}
+    \subsection*{Fully Associative Cache}
+    {
+        Data can be stored in any location, not just a single one: have to check all entries in parallel, so expensive to implement (but still fast).
+    }
     \subsection*{Set Associative}
     {
+        Combines direct and associative caching: directly identify fully-associative sets of blocks.
+
         For an \(n\)-way set associative cache, store \(n\) sets/ways of blocks, each set/way being addressable by the index. Look up the line in all ways at the same time, and report whichever holds it.
 
         Can be the fastest type of cache.
-    }
-    \subsection*{Fully Associative Cache}
-    {
-        Can further divide memory into ways to get a highly- or fully-associative cache, but it's inefficient.
-
-        Content Addressable Memories return addresses of data given the data.
     }
     \subsection*{Block Replacement}
     {
@@ -496,7 +498,7 @@
 
         Usually write-through + allocate-write and write-back + no-allocate-write.
 
-        Inclusive caches ensure that addresses in higher-level memory are a superset of address in lower-level memory. Exclusive caches don't enforce this.
+        Inclusive caches ensure that addresses in higher-level memory are a superset of address in lower-level memory. Exclusive caches don't enforce this. Inclusion is good if the higher cache is much bigger, otherwise exclusion is more efficient. Instructions are usually exclusive.
     }
     \subsection*{Cache Misses}
     {
@@ -508,6 +510,74 @@
         \item \textbf{Conflict}: Direct mapped and set-associative caches suffer conflict misses on collisions.
         \end{itemize}
     }
-    % pg346
+    \subsection*{Optimisations}
+    {
+        \textbf{Write Buffers} sit before a cache/main memory and buffer writes to it: don't write to the slow memory in case the value gets overwritten soon, or we write to an adjacent memory location and can merge writes. Need to look in the buffer when reading in case there's a buffered value.
+
+        L1 caches are normally small with low associativity. L2+ caches are higher associativity.
+
+        \textbf{Victim Caches} are small, fully-associative caches for storing lines evicted from L1. Reduces \textbf{conflict misses}.
+
+        \textbf{Non-blocking Caches} work with out-of-order execution to continue serving data even while servicing a miss for a different instruction. \textbf{`Hit under miss'} allows servicing hits while handling a miss, \textbf{`Miss under miss'} allows handling multiple misses at the same time. Can reduce impact of a cache miss if there is enough ILP.
+
+        \textbf{Loop fusion}, combine two loops on the same array into one for higher temporal locality. \textbf{Loop fission}, split loops on different arrays to save cache space. \(n\)-dimensional loops should use indices in an order that leads to sequential memory accesses.
+
+        May need to insert padding between large arrays in case the memory addresses of the arrays map to the same locations in cache (eg.\ contiguous arrays of length 2KB will all map to the same index in a direct-mapped cache).
+
+        Memory prefetching can be done in parallel by the processor if hinted. Processor can do automatic prefetching by fetching sequential blocks after a miss. More complicated schemes.
+    }
+}
+\section*{Vector Processors}
+{
+    \begin{minipage}[t]{0.45\textwidth}
+    Vector processors provide operations acting on vectors, rather than individual registers/memory locations. Not like VLIW, as we only run one instruction at a time: the operands are just larger.
+
+    Use vector registers (fixed size), multiple entries with one name (lots of ports on register file). Also have scalar registers, for providing eg.\ operand values. Functional units specifically designed to operate on such registers.
+
+    Vector operations are dense and predictable, so are easy to optimise. Massive reduction in number of instructions fetched/decoded/executed.
+    \end{minipage}
+    \hspace{5mm}
+    \begin{minipage}[t]{0.5\textwidth}
+    \vspace{0pt}
+    \centering
+    \includegraphics[width=\textwidth]{vector-lanes.png}
+    \end{minipage}
+
+    Functional unit are \textbf{pipelined} and split across \textbf{lanes}: elements of vectors are interleaved across lanes. After the pipelines start producing, the results emerge from each lane in order, so they can be easily written to the destination register.
+
+    \subsection*{Complexities}
+    {
+        Requires extremely high memory bandwidth.
+
+        Not all vectors are full of data: require an attached scalar register containing the vector length.
+
+        Need to load data from memory separated by a fixed stride (eg.\ 2D arrays). Memory units support reading/writing with a scalar stride per vector element.
+    }
+    \subsection*{Optimisations}
+    {
+        \begin{minipage}[t]{0.6\textwidth}
+        \textbf{Chaining}: don't need to wait for a multiply to finish operating on a vector before we start adding with it, we only need to wait for the first element to be finished.
+
+        \textbf{Vector conditional execution}: want to handle per-element conditionals. Use a vector mask (vector containing booleans) to control execution of an operation.
+
+        \textbf{Pointers}: support gather/scatter instructions which are load/store but operate on each element of a vector.
+        \end{minipage}
+        \hspace{5mm}
+        \begin{minipage}[t]{0.35\textwidth}
+        \vspace{0pt}
+        \centering
+        \includegraphics[width=\textwidth]{vector-chaining.png}
+        \end{minipage}
+    }
+    \subsection*{SIMD ISA Extensions}
+    {
+        Often perform vectorisable computation on general purpose processors (multimedia, crypto, DSP, ...). Add SIMD instructions to general-purpose ISAs.
+
+        Use wide registers (eg.\ 128 bit scalar) as a short vector (8 16-bit values). Special FUs for processing them.
+    }
+}
+\section{Chip Multiprocessors}
+{
+    
 }
 \end{document}
