@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[a4paper,11pt]{article}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -467,15 +467,17 @@
     \end{minipage}
     \subsection*{Fully Associative Cache}
     {
-        Data can be stored in any location, not just a single one: have to check all entries in parallel, so expensive to implement (but still fast).
+        Data can be stored in any location, not just a single one: have to check tag against all entries in parallel, so expensive to implement (but very fast).
     }
     \subsection*{Set Associative}
     {
-        Combines direct and associative caching: directly identify fully-associative sets of blocks.
+        \textbf{Combines} direct and associative caching: directly identify fully-associative sets of blocks. Can be the fastest type of cache.
 
-        For an \(n\)-way set associative cache, store \(n\) sets/ways of blocks, each set/way being addressable by the index. Look up the line in all ways at the same time, and report whichever holds it.
+        For an \(n\)-way set associative cache, there are multiple sets of \(n\) cache lines. Each block is direct-mapped to a set, but can be held in any location within a set (fully-associative, parallel lookup).
 
-        Can be the fastest type of cache.
+        A block's \textbf{tag} maps to a set. Any \textbf{way} in the set can contain the block.
+
+        Ways can be held in different caches, maybe with different latencies: ideally want the most frequently accessed cache line to be in the lowest-latency way.
     }
     \subsection*{Block Replacement}
     {
@@ -499,6 +501,8 @@
         Usually write-through + allocate-write and write-back + no-allocate-write.
 
         Inclusive caches ensure that addresses in higher-level memory are a superset of address in lower-level memory. Exclusive caches don't enforce this. Inclusion is good if the higher cache is much bigger, otherwise exclusion is more efficient. Instructions are usually exclusive.
+
+        If an inclusive higher cache \textbf{shadows} the tags of a lower cache, it means that it keeps a directory of the tags contained in the lower cache (L2 cache shadowing the L1 cache tags means L2 knows what addresses are in L1, but not the values).
     }
     \subsection*{Cache Misses}
     {
@@ -613,6 +617,8 @@
             Snoopy buses don't scale well, as transactions are broadcast to all caches.
 
             Directory-based protocols use a `directory' responsible for arbitrating access to each block of the cache. Processors send requests for access to the directory. The directory keeps track of the owner and sharers.
+
+            Example (PPQ): L2 directory shadows write-through L1 tags (contains copies of each stored tag). Additionally store with each tag which caches have a copy. When a processor writes to L1 it writes through to L2 and tells all sharing caches to invalidate.
         }
     }
     \subsection*{Cache Consistency}
