@@ -215,6 +215,49 @@ Optimisation = Analysis + Transformation
 }
 \section*{Strictness Analysis}
 {
+    Use-case of abstract interpretation.
+
+    Associate standard and abstract interpretations with the builtin functions (\(a_i\) and \(a^\sharp_i\)), and deduce standard and abstract interpretations for the user-defined functions (\(f_i\) and \(f^\sharp_i\)).
+
+    Assume the domain of the functions \(D\) is augmented with a value \(\bot\) to represent a non-terminating value: \(D \cup \{\bot\}\).
+
+    A function \(a\) is \textbf{strict} in its \(i\)\textsuperscript{th} parameter iff \(\forall d_i.\; a(d_1, \dots, \bot, \dots, d_n) = \bot\). For example, \(+\) is strict in both parameters as:
+    \begin{align*}
+    \bot + y &= \bot \\
+    x + \bot &= \bot \\
+    x + y    &= x +_\mathbb{Z} y
+    \end{align*}
+
+    Define the space of abstract values to be \(D = \{0, 1\}\) where \textbf{0 represents guaranteed looping} and \textbf{1 represents possible termination}. Safety here means that we \textbf{underestimate} the strictness of functions (we don't want to alter semantics).
+
+    We can define the abstract interpretations of the builtin functions from their given semantics:
+    \begin{equation*}
+    a^\sharp(x_1, ..., x_n) = \begin{cases}
+        0 & \text{, if }\forall d_i \in D \text{ where }(x_i = 0 \implies d_i = \bot), a(d_1, ..., d_n) = \bot \\
+        1 & \text{, otherwise}
+    \end{cases}
+    \end{equation*}
+
+    The weird condition just means `if \(x_i = 0\) then we force the corresponding semantic argument \(d_i\) to be \(\bot\)'. Essentially just generate \(a^\sharp\) by trying every \(0/1\) input value for the arguments and seeing if \(a\) is terminating or not, then find an expression that matches that. For example, \(x +^\sharp y = x \wedge y\) and \(\text{cond}^\sharp(p, x, y) = p \wedge (x \vee y)\).
+
+    Can generate strictness values for user-defined functions by composing their builtin components. We can't compute it from scratch as it's undecidable (determining whether a functions doesn't terminate): we have to use explicitly specified builtin functions instead.
+
+    In general, need a least-fixed-point iteration over all of the user-defined functions so that updates to one function's strictness predicate updates the predicates of functions that use it. The start value for each strictness predicate should be 0, we assume no functions terminate, then we refine down to more accurate predicates using our knowledge of what definitely terminates.
+
+    \textbf{Example}: \monospace{plus(x, y) = cond(eq(x, 0), y, plus(sub1(x), add1(y)))}.
+
+    Given that \(\text{plus}^\sharp(x,y) = x \wedge y\), \(\text{eq}^\sharp(x,y) = x \wedge y\), \(\text{add1}^\sharp(x) = x\), \(\text{sub1}^\sharp(x) = x\), \(0^\sharp = 1\).
+    \begin{enumerate}
+    \item \(\text{plus}^\sharp(x, y) = 0\) (initial assumption)
+    \item \(\text{plus}^\sharp(x, y) = \text{cond}^\sharp(\text{eq}^\sharp(x,0), y, \text{plus}^\sharp(\text{sub1}^\sharp(x), \text{add1}^\sharp(x))) = x \wedge (y \vee 0) = x \wedge y\)
+    \item \(\text{plus}^\sharp(x, y) = \text{cond}^\sharp(\text{eq}^\sharp(x,0), y, \text{plus}^\sharp(\text{sub1}^\sharp(x), \text{add1}^\sharp(x))) = x \wedge (y \vee (x \wedge y)) = x \wedge y\)
+    \item No change, so we terminate with \(\text{plus}^\sharp(x,y) = x \wedge y\)
+    \end{enumerate}
+
+    The strictness optimisation just allows us to evaluate arguments before passing them as thunk arguments.
+}
+\section*{Constraint-Based Analysis}
+{
 
 }
 \end{document}
