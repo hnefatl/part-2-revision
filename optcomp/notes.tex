@@ -1,0 +1,220 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{titlesec}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2cm]{geometry}
+\usepackage{prftree}
+\usepackage{changepage}
+\usepackage{enumitem}
+\usepackage{minted}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+
+\title{\vspace{-2.5cm}CompArch\vspace{-2cm}}
+\author{}
+\date{}
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{2mm}
+\setlist{nosep}
+
+% Make ~ look more normal
+\let\oldsim\sim
+\renewcommand{\sim}{{\oldsim}}
+
+\newmintinline[monospace]{text}{escapeinside=\#\#, mathescape, fontsize=\normalsize}
+\newminted[monospacefigure]{text}{frame=lines, framesep=1mm, autogobble, escapeinside=\#\#, mathescape, breaklines}
+
+\titlespacing{\section}{0mm}{2mm}{2mm}
+\titlespacing{\subsection}{0mm}{2mm}{2mm}
+\titlespacing{\subsubsection}{0mm}{2mm}{2mm}
+
+\begin{document}
+\maketitle
+
+Optimisation = Analysis + Transformation
+
+\section*{Unreachable Code Elimination}
+{
+    \begin{enumerate}
+    \item Mark the entry node of each procedure as reachable.
+    \item Mark every \textbf{successor} of a marked node, repeat until no change.
+    \end{enumerate}
+
+    \texttt{goto} may have multiple potential successor nodes, depending on semantics: jumping to a variable address might mean marking all nodes as reachable.
+}
+\section*{Unreachable Procedure Elimination}
+{
+    \begin{enumerate}
+    \item Mark \texttt{main} as reachable.
+    \item Mark every procedure called from a marked procedure as reachable, repeat until no change.
+    \end{enumerate}
+
+    Function pointers (indirect calls) have the same safety issues as \texttt{goto} above. Can improve by only adding functions which are address-taken somewhere in the program, rather than all procedures.
+}
+\section*{Live Variable Analysis (LVA)}
+{
+    \begin{itemize}
+    \item A variable is \textbf{semantically} live if changing its value affects the \textbf{observable} behaviour of the program.
+    \item A variable is \textbf{syntactically} live if there is some path through the flowgraph to a node in which the current value might be \textbf{used} (not necessarily actually hit at runtime).
+    \end{itemize}
+
+    Safety constitutes overestimation, that syntactically live variables are a superset of semantically live variables.
+
+    Backwards flow equations. \(\text{def}(n)\) is the set of variable assigned to in the node, \(\text{ref}(n)\) is the set of variables used in the node.
+    \begin{align*}
+    \text{live}(n) &= \bigg(\bigcup_{s \in \text{succ}(n)}{\text{live}(s)}\bigg) \setminus \text{def}(n) \cup \text{ref}(n) \\\\
+    \text{out-live}(n) &= \bigcup_{s \in \text{succ}(n)}{\text{in-live}(s)} \\
+    \text{in-live}(n) &= \text{out-live}(n) \setminus \text{def}(n) \cup \text{ref}(n)
+    \end{align*}
+
+    For safety with \textbf{pointers}, treat pointer dereferences as referencing any address-taken variable, and assignments to a pointer dereference as not defining any variables: \(\text{ref}(*p) = \{p, x, y, ...\}\) and \(\text{def}(*p = x) = \{\}\).
+
+    \subsection*{Dataflow Anomalies}
+    {
+        If a variable is live at entry to a procedure, then we can report a warning that a variable has been used before being assigned to.
+
+        Write-write anomalies (writing to a variable without ever reading the old value) can be detected by doing the opposite of LVA: go forwards, and union with \(\text{def}\) instead of \(\text{ref}\) (then each set holds the variables not yet read from). Any instruction which adds an existing variable to the set can be given a write-write anomaly warning.
+    }
+    \subsection*{Register Allocation by Colouring}
+    {
+        \begin{itemize}
+        \item Generate a graph with virtual registers as nodes and edges between virtual registers which are simultaneously live. Virtual registers represent architectural registers in the IL, but are renamed to physical registers at code generation.
+        \item
+        {
+            Choose a virtual register with the lowest clashes (edges).
+
+            \begin{itemize}
+            \item If the number of clashes is lower than the number of colours/physical registers then colour it and remove it from the graph.
+            \item Otherwise, mark the register as being spilled to memory (store it in a set) and remove it from the graph.
+            \end{itemize}
+        }
+        \end{itemize}
+            
+        Spilled registers need relevant \texttt{MOV} instructions to be generated.
+
+        A \textbf{preference graph} can be built up to track extra information about the register dependencies to affect node selection decisions (such as number of accesses, whether the use is in a loop body, programmer \texttt{register} hints, ...).
+
+        \subsubsection*{Spilling}
+        {
+            We need a spare register to hold variables which were spilled to memory: we may need more if multiple spilled registers are used as operands to the same instruction.
+
+            If we find that we need to spill during register allocation, just restart the register allocation with one register reserved as `temporary' for the spilled value. If we find another spill, reserve another register, and so on (up to the max number of operands per instruction).
+        }
+        \subsubsection*{Non-orthogonal instructions}
+        {
+            Instructions that always write to a predetermined register (eg.\ `multiply and store the result in \monospace{r0}') mess up the allocation, as do procedure calls (which use eg.\ registers \monospace{r\{0..4\}} as argument registers and \monospace{r\{5..10\}} as being preserved over function calls).
+
+            \begin{itemize}
+            \item Reserve virtual registers for all architectural registers that have special usage (the registers used for results/function arguments).
+            \item When an instruction/procedure call requires an operand in an architectural register, generate a preceding \texttt{mov} instruction from the source register to the virtual register (node) which represents the architectural register.
+            \item Generate a trailing \texttt{mov} instruction from the virtual register to the destination register for instructions which output to a specific register.
+            \end{itemize}
+
+            Remember that the virtual registers \textbf{are} the architectural registers, they represent a logical mapping rather than eg.\ the difference between architectural and physical registers from CompArch. Moving data to the virtual register is just the register-allocation-stage way of moving data to the architectural register: at code generation, we specifically map the reserved arch registers to the real arch registers.
+        }
+    }
+}
+\section*{Available Expressions (AVAIL)}
+{
+    Available Expressions are those expressions that have been syntactically computed prior to that node and haven't been invalidated.
+
+    Forwards flow equations:
+    \begin{equation*}
+    \text{avail}(n) =
+    \begin{cases}
+    \bigcap_{p \in \text{pred}(n)}{\big(\text{avail}(p) \setminus \text{kill}(p) \cup \text{gen}(p)\big)} &\text{, if pred}(n) \neq \emptyset \\
+    \emptyset &\text{, if pred}(n) = \emptyset
+    \end{cases}
+    \end{equation*}
+
+    \(\text{gen}(n)\) gives the expressions computed at \(n\), but \textbf{minus any expressions changed by assignments}: \(\text{gen}(\texttt{x = y + z}) = \{\texttt{y + z}\}\), but \(\text{gen}(\texttt{x = x + y}) = \emptyset\), as the new value of \texttt{x} invalidates the expression. \(\text{kill(n)}\) contains the variables assigned to in the node.
+
+    \subsubsection*{Common Subexpression Elimination}
+    {
+        If an expression is computed both at \(n\) and on a node on all paths to \(n\), then we can arrange for all the prior computations to store their results in a local variable so we don't need to evaluate the expression again.
+
+        \begin{enumerate}
+        \item For each node \(n\) containing \monospace{x = a #\(\oplus\)# b} with \monospace{a #\(\oplus\)# b} available at \(n\):
+        \item Create a temporary variable \monospace{t} and replace the assignment in \(n\) with \monospace{x = t}.
+        \item On each path to \(n\), for the latest computation of \monospace{y = a #\(\oplus\)# b}, add an instruction \monospace{t = y}.
+        \end{enumerate}
+    }
+}
+\section*{Static Single Assignment Form (SSA)}
+{
+    It can be advantageous to use different registers for a variable throughout its scope if it gets reassigned to: otherwise we have a form of false dependency (we depend on the data but are limited by the name).
+
+    SSA uses a new variable for every assignment, which \textbf{minimises the live ranges of each variable}, so allows for \textbf{more efficient register allocation}.
+
+    When paths merge in the flowgraph we need to ensure that temporaries of the same variable which were assigned to on the branches have their values updated into one variable. Can use \(\phi\) functions, which are usually just a theoretical concept: \monospace{x = #\(\phi\)#(x1, x2)} means \monospace{x = x1} if control took a left branch and \monospace{x = x2} if control took a right branch. The \textbf{register allocation pass} can arrange for \monospace{x1} and \monospace{x2} to be assigned to the \textbf{same register}. On some architectures this might not always be possible, so the final resort is to implement an actual branch to update the variables properly.
+}
+\section*{Phase Order}
+{
+    Different optimisations have different impacts depending on their relative ordering: even preference choices in one pass can alter the effectiveness of subsequent passes. Code motion optimisations are hard to predict the impact of.
+}
+\section*{Algebraic Identities}
+{
+    Simple syntax rewriting, replacing eg.\ \monospace{x = 1 + 2} with \monospace{x = 3} or \monospace{[1,2] ++ [3,4]} with \monospace{[1,2,3,4]}.
+}
+\section*{Strength Reduction}
+{
+    Generally, switch expensive instructions for cheaper ones. Specifically for loops:
+
+    \begin{enumerate}
+    \item Find induction variables which are used as \monospace{i = i #\(\oplus\) c#}.
+    \item Find another variable \monospace{j = (i #\(\otimes\)# c1) #\(\oplus\)# c2}.
+    \item Move the assigment \monospace{j = (i #\(\otimes\)# c1) #\(\oplus\)# c2} to above the loop.
+    \item Add an end-of-loop-body instruction \monospace{j = j #\(\oplus\)# (c1 #\(\otimes\)# c)}.
+    \end{enumerate}
+
+    Can then patch up the loop header using the known relation between \monospace{i} and \monospace{j}.
+
+    Example:
+
+    \begin{minipage}[t]{0.45\textwidth}
+    \begin{monospacefigure}
+    int total = 0;
+    for (int x = 0; x < 100; x += 10)
+        total += a * x + b;
+    \end{monospacefigure}
+    \end{minipage}
+    \hspace{5mm}
+    \begin{minipage}[t]{0.45\textwidth}
+    \begin{monospacefigure}
+    for (int tot = b; tot < a * 90 + b; )
+        tot += 10 * a;
+    \end{monospacefigure}
+    \end{minipage}
+}
+\section*{Abstract Interpretation}
+{
+    Abstract to reach a more easily-computable representation that allows for extracting properties.
+
+    \begin{tabular}{c | c c c}
+    \(\otimes\) & \((-)\) & \((0)\) & \((+)\) \\
+    \hline
+    \((-)\) & \((+)\) & \((0)\) & \((-)\) \\
+    \((0)\) & \((0)\) & \((0)\) & \((0)\) \\
+    \((+)\) & \((-)\) & \((0)\) & \((+)\)
+    \end{tabular}
+    \hspace{1cm}
+    \begin{tabular}{c | c c c c}
+    \(\oplus\) & \((-)\) & \((0)\) & \((+)\) & \((?)\) \\
+    \hline
+    \((-)\) & \((-)\) & \((-)\) & \((?)\) & \((?)\) \\
+    \((0)\) & \((-)\) & \((0)\) & \((+)\) & \((?)\) \\
+    \((+)\) & \((?)\) & \((+)\) & \((+)\) & \((?)\) \\
+    \((?)\) & \((?)\) & \((?)\) & \((?)\) & \((?)\)
+    \end{tabular}
+
+    Abstract interpretations can give different results depending on the syntax, even if the semantics are the same: \((x+1)(x-3)\) has abstract interpretation \((?)\) when \(x = (-)\), but \(x^2 - 2x - 3\) has interpretation \((+)\).
+}
+\section*{Strictness Analysis}
+{
+
+}
+\end{document}
