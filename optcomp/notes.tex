@@ -338,4 +338,51 @@ Optimisation = Analysis + Transformation
         Can change the representation of effects to carry more information: allow writing values of types other than \(\text{int}\), or use lists instead of sets to capture ordering information.
     }
 }
+\section*{Alias Analysis (Andersen's Analysis)}
+{
+    Similar to 0-CFA. Given a pointer \(p\), find the \textbf{locations} that it might point to \(\text{pt}(p)\).
+
+    \begin{itemize}
+    \item For a term \(x := \texttt{null}\), generate \(\text{pt}(x) \supseteq \{\texttt{null}\}\).
+    \item For a term \(x := \&y\), generate \(\text{pt}(x) \supseteq \{y\}\).
+    \item For a term \(x := \texttt{new}_l\), generate \(\text{pt}(x) \supseteq \{\texttt{new}_l\}\).
+    \item For a term \(x := y\), generate \(\text{pt}(x) \supseteq \text{pt}(y)\).
+    \item For a term \(x := *y\), generate \(\text{pt}(x) \supseteq \text{pt}(z)\) for all \(z \in \text{pt}(y)\).
+    \item For a term \(*x := y\), generate \(\text{pt}(z) \supseteq \text{pt}(y)\) for all \(z \in \text{pt}(x)\).
+    \end{itemize}
+
+    Most important thing to remember is that \(\text{pt}(x)\) is the set of \textbf{locations} that \(x\) can point to, not the values. Then the rules aren't hard to reproduce.
+
+    If \(\text{pt}(x) \cap \text{pt}(y) = \emptyset\) then \(x\) and \(y\) cannot point to the same location, so we can reorder assignments or perform parallelisation etc.
+
+    Safety is that \(\text{pt}(x)\) is an overapproximation of the true pointers that can be pointed to.
+}
+\section*{Instruction Scheduling}
+{
+    Instruction scheduling aims to minimise the number of pipeline stalls or bubbles, or increase the program ILP. Approaches are all heuristics, it's an intractable.
+
+    \begin{enumerate}
+    \item Construct a scheduling DAG for each basic block, with nodes being instructions. Scan backwards through the block and add a dependency edge from \(a\) to \(b\) if \(a\) occurs before \(b\) in the original order and cannot be moved before it.
+    \item
+    {
+        Considering just the minimal elements (lowest in-degree) of the DAG:
+        \begin{itemize}
+        \item Emit an instruction satisfying the static scheduling heuristics.
+        \item If no instruction satisfies the heuristics then emit a NOP.
+        \item Remove the instruction from the DAG.
+        \end{itemize}
+    }
+    \end{enumerate}
+
+    The static scheduling heuristics are:
+    \begin{itemize}
+    \item Choose an instruction not conflicting with the previous emitted instruction.
+    \item Choose an instruction most likely to conflict if first of a pair (eg.\ load before add).
+    \item Choose an instruction as far as possible from a maximal instruction (highest in-degree).
+    \end{itemize}
+}
+\section*{Decompilation}
+{
+    % Need to go through the slides and sync the level of detail from them to the previous sections here, then write this section using the slides (more detailed than notes).
+}
 \end{document}
