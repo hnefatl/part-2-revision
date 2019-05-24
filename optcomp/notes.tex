@@ -258,6 +258,84 @@ Optimisation = Analysis + Transformation
 }
 \section*{Constraint-Based Analysis}
 {
+    Generally, traverse the syntax tree emitting constraints that are solved later (eg.\ if \monospace{x} is constrained to be even, we can later infer that \monospace{x + 1} is odd).
 
+    \subsubsection*{Control-Flow Analysis}
+    {
+        Aim to compute the \textbf{set of values} (constants and lambda-abstractions) that any expression in the program can take.
+
+        Language is \(e ::= x \mid c \mid \lambda x.\;e \mid e_1\;e_2 \mid \texttt{let }x = e_1 \texttt{ in } e_2\).
+
+        Define a \textbf{program point} to be a label which uniquely identifies a syntactic expression:\\ \monospace{(let x#\(^2\)# = 1#\(^3\)# in (x#\(^4\)# + 2#\(^5\)#)#\(^6\)#)#\(^1\)#}.
+
+        Associate a \textbf{flow variable} (representing the set of possible values) with each program point (\(\alpha_1\), ...)/ The space of possible \textbf{flow values} for the example above are \(\{\texttt{1}^3, \texttt{2}^5, \texttt{(x}^4\texttt{ + 2}^5\texttt{)}^6\}\).
+
+        Safety consists of overestimating the possible values computed by the expressions.
+
+        \begin{itemize}
+        \item For a term \(x^i\), generate \(\alpha_i \supseteq \alpha_j\) where \(\alpha_j\) is the flow variable for the expression bound to \(x^i\) (eg.\ by \((\lambda x^i.\;...)\;e^j\) or \(\texttt{let }x^i\texttt{ = }e^j\texttt{ in }...\)). Don't think this is actually necessary as \(\alpha_i\) should be constrained by the bindings themselves.
+        \item For a term \(c^i\), generate \(\alpha_i \supseteq \{c^i\}\).
+        \item For a term \((\lambda x^j.\;e^k)^i\), generate \(\alpha_i \supseteq \{(\lambda x^j.\;e^k)^i\}\).
+        \item For a term \((e_1^j\;e_2^k)^i\), generate \((\alpha_k \rightarrow \alpha_i) \supseteq \alpha_j\).
+        \item For a term \((\texttt{let }x^l\texttt{ = }e^j\texttt{ in }e^k)^i\), generate \(\alpha_i \supseteq \alpha_k\) and \(\alpha_l \supseteq \alpha_j\).
+        \item For a term \((\texttt{if }e_1^j\texttt{ then }e_2^k\texttt{ else }e_3^l)^i\), generate \(\alpha_i \supseteq \alpha_k\) and \(\alpha_i \supseteq \alpha_k\).
+        \end{itemize}
+
+        \((\alpha_k \rightarrow \alpha_i) \supseteq \alpha_j\) is shorthand for `whenever \((\lambda x^a.\;e^b)^c \in \alpha_j\) then \(\alpha_a \supseteq \alpha_k\) and \(\alpha_i \supseteq \alpha_b\)'. This means that \textbf{any of the actual parameters become possible values of the formal parameters, and the possible values of the application are the possible values of the function bodies}.
+
+        This approach is monovariant (0-CFA), which imposes the inaccuracy that different invocations of a function all affect the same set of possible values, rather than just a call-site specific version. A polyvariant approach fixes this.
+    }
+}
+\section*{Inference-Based Program Analysis}
+{
+    Generally, use a judgement system like \(\Gamma\vdash e : \phi\) to infer properties from the terms of the language. Type systems are a specific example, but can be generalised:
+    \begin{align*}
+    & \Gamma = \{2 : \text{even}, (+) : (\text{even}\rightarrow\text{even}\rightarrow\text{even}) \wedge (\text{even}\rightarrow\text{odd}\rightarrow\text{odd}) \wedge ..., (\times) : ...\} \\
+    & \Gamma\vdash (\lambda x.\;\lambda y.\;2 \times x + y) : ...
+    \end{align*}
+
+    \subsection*{Effect Systems}
+    {
+        Specific example of inference-based program analysis, modelling communicating systems.
+
+        Model effects as \(W_C\) and \(R_C\) for write/reads to a channel \(C\), use terms \(C!e_1.\;e_2\) for writing \(e_1\) and \(C?x.\;e\) for reading \(x\).
+
+        Judgements of the form \(\Gamma\vdash e : t, F\), with immediate effects \(F\). Latent effects are reresented by tags on function types, \(t_1 \stackrel{F}{\rightarrow} t_2\).
+
+        \begin{gather*}
+        \prftree[r]{(var)}
+        {x:t \in \Gamma}
+        {\Gamma\vdash x : t,\emptyset}
+        \qquad
+        \prftree[r]{(abs)}
+        {\Gamma,x:t_1\vdash e : t_2,F}
+        {\Gamma\vdash (\lambda x.\;e) : t_1 \stackrel{F}{\rightarrow} t_2,\emptyset}
+        \qquad
+        \prftree[r]{(app)}
+        {\Gamma\vdash e_1 : t_1 \stackrel{F_l}{\rightarrow} t_2}
+        {\Gamma\vdash e_2 : t_1, F_2}
+        {\Gamma\vdash e_1\;e_2 : t_2, F_1 \cup F_2 \cup F_l}
+        \\
+        \\
+        \prftree[r]{(read)}
+        {\Gamma,x:\text{int}\vdash e : t, F}
+        {\Gamma\vdash (C?x.\;e) : t, F \cup \{R_C\}}
+        \qquad
+        \prftree[r]{(write)}
+        {\Gamma\vdash e_1 : \text{int}, F_1}
+        {\Gamma\vdash e_2 : t, F_2}
+        {\Gamma\vdash (C!e_1.\;e_2) : t, F_1 \cup F_2 \cup \{W_C\}}
+        \\
+        \\
+        \prftree[r]{(sub)}
+        {\Gamma\vdash e : t_1 \stackrel{F_l}{\rightarrow} t_2, F}
+        {F_l \subseteq F_l'}
+        {\Gamma\vdash e : t_1 \stackrel{F_l'}{\rightarrow} t_2, F}
+        \end{gather*}
+
+        The \(\text{sub}\) rule is necessary to patch-up the types when there's eg.\ a conditional expression where the two branches are functions with different latent effects.
+
+        Can change the representation of effects to carry more information: allow writing values of types other than \(\text{int}\), or use lists instead of sets to capture ordering information.
+    }
 }
 \end{document}
