@@ -501,7 +501,9 @@ Optimisation = Analysis + Transformation
 
     \subsection*{Type Reconstruction}
     {
-        
+        Register allocation makes multiple variables use a single register, so assigning a type to a register is impossible, as the type can change. However, \textbf{can convert the assembly into SSA form} introducing new registers, to recover distinct logical variables (as used in the source), effectively undoing register allocation. Can do this SSA step either on assembly or on source already decompiled from the assembly.
+
+        Can then infer the type for each SSA variable using constraint-based analysis (pretty much just normal type inference): each operation constrains the possible types of a variable, so we traverse the AST generating type constraints and solve them at the end.
     }
 }
 \end{document}
