@@ -13,7 +13,7 @@
 \usepackage{graphicx}
 \usepackage{wrapfig}
 
-\title{\vspace{-2.5cm}CompArch\vspace{-2cm}}
+\title{\vspace{-2.5cm}Optimising Compilers\vspace{-2cm}}
 \author{}
 \date{}
 
@@ -36,6 +36,12 @@
 \maketitle
 
 Optimisation = Analysis + Transformation
+
+\begin{itemize}
+\item Remember that algorithms for LVA/AVAIL need \textbf{iterations to compute the least-fixed-point}.
+\item Remember that LVA/AVAIL are affected by \textbf{\monospace{goto} statements}. Don't just read the code blind.
+\item Be careful about live ranges when calling procedures: \textbf{are the registers preserved or clobbered}?
+\end{itemize}
 
 \section*{Unreachable Code Elimination}
 {
@@ -62,6 +68,10 @@ Optimisation = Analysis + Transformation
     \item A variable is \textbf{syntactically} live if there is some path through the flowgraph to a node in which the current value might be \textbf{used} (not necessarily actually hit at runtime).
     \end{itemize}
 
+    \textbf{Be careful with \texttt{GOTO} statements}: be aware of \textbf{non-trivial flowgraphs}, remember to do a least-fixed-point iteration to solve them.
+
+    \textbf{Remember that the `algorithm' includes a fixed-point wrapper.}
+
     Safety constitutes overestimation, that syntactically live variables are a superset of semantically live variables.
 
     Backwards flow equations. \(\text{def}(n)\) is the set of variable assigned to in the node, \(\text{ref}(n)\) is the set of variables used in the node.
@@ -82,7 +92,7 @@ Optimisation = Analysis + Transformation
     \subsection*{Register Allocation by Colouring}
     {
         \begin{itemize}
-        \item Generate a graph with virtual registers as nodes and edges between virtual registers which are simultaneously live. Virtual registers represent architectural registers in the IL, but are renamed to physical registers at code generation.
+        \item Generate a graph with virtual registers as nodes and \textbf{edges between virtual registers which are simultaneously live}. Virtual registers represent architectural registers in the IL, but are renamed to physical registers at code generation.
         \item
         {
             Choose a virtual register with the lowest clashes (edges).
@@ -117,10 +127,18 @@ Optimisation = Analysis + Transformation
             Remember that the virtual registers \textbf{are} the architectural registers, they represent a logical mapping rather than eg.\ the difference between architectural and physical registers from CompArch. Moving data to the virtual register is just the register-allocation-stage way of moving data to the architectural register: at code generation, we specifically map the reserved arch registers to the real arch registers.
         }
     }
+    \subsection*{Procedure Calls}
+    {
+        Need to be careful of \textbf{live ranges and procedure calls}: if a variable's \textbf{live range covers a procedure call}, then it needs to be allocated to a register that's \textbf{preserved over calls}.
+        
+        Similarly, if a variable is used to store the result of calling a function, then we want to allocate that variable to \monospace{r0} or whichever register is used to store function results.
+    }
 }
 \section*{Available Expressions (AVAIL)}
 {
     Available Expressions are those expressions that have been syntactically computed prior to that node and haven't been invalidated.
+
+    \textbf{Remember that the `algorithm' includes a fixed-point wrapper.}
 
     Forwards flow equations:
     \begin{equation*}
@@ -228,6 +246,8 @@ Optimisation = Analysis + Transformation
 \section*{Strictness Analysis}
 {
     Use-case of abstract interpretation.
+
+    \(f(x,y) = \texttt{if }x = 0\texttt{ then }y\texttt{ else }f(x-1, y+1)\) has \textbf{runtime space complexity \(O(1)\) if \(y\) is marked as strict, but \(O(x)\) if \(y\) isn't marked as strict}.
 
     Associate standard and abstract interpretations with the builtin functions (\(a_i\) and \(a^\sharp_i\)), and deduce standard and abstract interpretations for the user-defined functions (\(f_i\) and \(f^\sharp_i\)).
 
@@ -363,11 +383,13 @@ Optimisation = Analysis + Transformation
     \item For a term \(*x := y\), generate \(\text{pt}(z) \supseteq \text{pt}(y)\) for all \(z \in \text{pt}(x)\).
     \end{itemize}
 
-    Most important thing to remember is that \(\text{pt}(x)\) is the set of \textbf{locations} that \(x\) can point to, not the values. Then the rules aren't hard to reproduce.
+    Most important thing to remember is that \(\text{pt}(x)\) is the set of \textbf{locations that \(x\) can point to}, not the values. Then the rules aren't hard to reproduce.
 
     If \(\text{pt}(x) \cap \text{pt}(y) = \emptyset\) then \(x\) and \(y\) cannot point to the same location, so we can reorder assignments or perform parallelisation etc.
 
     Safety is that \(\text{pt}(x)\) is an overapproximation of the true pointers that can be pointed to.
+
+    \textbf{Information from alias analysis can be used in instruction scheduling later, to reduce the expected cost of an instruction}.
 }
 \section*{Instruction Scheduling}
 {
