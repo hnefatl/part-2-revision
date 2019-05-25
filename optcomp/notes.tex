@@ -142,6 +142,16 @@ Optimisation = Analysis + Transformation
         \item Create a temporary variable \monospace{t} and replace the assignment in \(n\) with \monospace{x = t}.
         \item On each path to \(n\), for the latest computation of \monospace{y = a #\(\oplus\)# b}, add an instruction \monospace{t = y}.
         \end{enumerate}
+
+        Adding an extra variable might make the program worse: it increases register pressure, and memory accesses are often more expensive than the redundant computations.
+    }
+    \subsection*{Copy Propagation}
+    {
+        After seeing \monospace{x = y}, replace all subsequent occurrences of \monospace{x} with \monospace{y} (provided \monospace{x} isn't reassigned).
+
+        Can then maybe eliminate the original assignment, which removes a variable so reduces register pressure.
+
+        Useful after CSE, as it can eliminate the temporary variable used.
     }
 }
 \section*{Static Single Assignment Form (SSA)}
@@ -151,6 +161,8 @@ Optimisation = Analysis + Transformation
     SSA uses a new variable for every assignment, which \textbf{minimises the live ranges of each variable}, so allows for \textbf{more efficient register allocation}.
 
     When paths merge in the flowgraph we need to ensure that temporaries of the same variable which were assigned to on the branches have their values updated into one variable. Can use \(\phi\) functions, which are usually just a theoretical concept: \monospace{x = #\(\phi\)#(x1, x2)} means \monospace{x = x1} if control took a left branch and \monospace{x = x2} if control took a right branch. The \textbf{register allocation pass} can arrange for \monospace{x1} and \monospace{x2} to be assigned to the \textbf{same register}. On some architectures this might not always be possible, so the final resort is to implement an actual branch to update the variables properly.
+
+    Always remember \textbf{live ranges}, they can be great for visualising liveness.
 }
 \section*{Phase Order}
 {
@@ -359,7 +371,14 @@ Optimisation = Analysis + Transformation
 }
 \section*{Instruction Scheduling}
 {
-    Instruction scheduling aims to minimise the number of pipeline stalls or bubbles, or increase the program ILP. Approaches are all heuristics, it's an intractable.
+    Instruction dependencies prevent instruction reordering:
+    \begin{itemize}
+    \item Read after Write
+    \item Write after Read
+    \item Write after Write
+    \end{itemize}
+
+    Instruction scheduling aims to minimise the number of pipeline stalls or bubbles, or increase the program ILP, \textbf{while preserving the dependencies} to ensure program semantics. No dynamic reordering of loads before stores at runtime like a processor can do.
 
     \begin{enumerate}
     \item Construct a scheduling DAG for each basic block, with nodes being instructions. Scan backwards through the block and add a dependency edge from \(a\) to \(b\) if \(a\) occurs before \(b\) in the original order and cannot be moved before it.
@@ -376,13 +395,113 @@ Optimisation = Analysis + Transformation
 
     The static scheduling heuristics are:
     \begin{itemize}
-    \item Choose an instruction not conflicting with the previous emitted instruction.
-    \item Choose an instruction most likely to conflict if first of a pair (eg.\ load before add).
-    \item Choose an instruction as far as possible from a maximal instruction (highest in-degree).
+    \item Choose an instruction not conflicting with the previous emitted instruction (as that would introduce a stall).
+    \item Choose an instruction most likely to conflict if first of a pair (eg.\ load before add as loads conflict with most instructions whereas adds conflict with few).
+    \item Choose an instruction as far as possible (along paths in the DAG) from a maximal instruction (highest in-degree).
     \end{itemize}
+
+    \begin{minipage}[t]{0.3\textwidth}
+    Original:
+    \vspace{-5mm}
+    \begin{monospacefigure}
+    1: LD   r1  0(r0)
+    2: LD   r2  4(r0)
+    3: ADD  r3  r1      r2
+    4: ST   r3  12(r0)
+    5: LD   r4  8(r0)
+    6: ADD  r3  r1      r4
+    7: ST   r3  16(r0)
+    \end{monospacefigure}
+    \end{minipage}
+    \hspace{1mm}
+    \begin{minipage}[t]{0.2\textwidth}
+    \vspace{0pt}
+    \includegraphics[width=\textwidth]{dependency-graph.png}
+    \end{minipage}
+    \hspace{3mm}
+    \begin{minipage}[t]{0.45\textwidth}
+    Reordered:
+    \vspace{-5mm}
+    \begin{monospacefigure}
+    1: minimal node, tie break randomly
+    2: minimal node, tie break randomly
+    5: minimal node, 3 conflicts with 2
+    3: minimal node, no tie break
+    4: minimal node, no tie break
+    6: minimal node, no tie break
+    7: minimal node, no tie break
+    \end{monospacefigure}
+    \end{minipage}
+
+    When making a dependency graph, remember to check \textbf{every pair of nodes} for \textbf{all 3 dependency types}.
+
+    In the original code, there are \textbf{stalls} between lines 2-3 and 5-6 as the data we need isn't available yet. In the reordered code, there are no stalls.
+
+    Assume that loads take eg.\ 1 cycle to complete, so any instruction needing the loaded data conflicts.
 }
 \section*{Decompilation}
 {
-    % Need to go through the slides and sync the level of detail from them to the previous sections here, then write this section using the slides (more detailed than notes).
+    Legality: sketchy, get a lawyer or do it on own code.
+
+    Compilation isn't injective, so can't perfectly recover source code. Optimisations further obfuscate original structure as they rearrange things at a low level.
+
+    To recover structural information we extract a flowgraph of basic blocks from the machine code then match them against standard structures from the source language (loops, if statements etc).
+
+    In a flowgraph, node \(m\) \textbf{dominates} node \(n\) if control \textbf{has} to go through \(m\) to reach \(n\) (there are no paths to \(n\) which don't go through \(n\)). \textbf{Strict domination} further implies that \(m \neq n\). The \textbf{immediate dominator} of \(n\) is the unique node that strictly dominates \(n\) but doesn't dominate any other strict dominator of \(n\). This isn't as simple as `immediate parent' or similar.
+
+    The \textbf{dominance frontier} of \(m\) is the set of nodes \(n\) such that \(m\) doesn't dominate \(n\) but does dominate an immediate predecessor of \(n\): the set of nodes `where \(m\)'s dominance no longer holds'.
+
+    A \textbf{dominance tree} is a tree (independent of the flowgraph) with nodes being basic blocks and an edge between two nodes if the parent is the immediate dominator of the child.
+
+    A \textbf{back edge} \(b \rightarrow a\) in the dominance graph is an edge where the head also dominates the tail (\(a\) also dominates \(b\), although probably not directly). Every back edge has an associated loop, where the head \(a\) is the loop header and the loop body is \textbf{all the nodes that can reach \(b\) without passing through the header \(a\)}.
+
+    \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[height=7cm]{flow-graph.png}
+
+    \textbf{Flowgraph with dominance edges}
+
+    Back edges are in red, dominating predecessors in grey.
+    \end{minipage}
+    \hspace{5mm}
+    \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[height=7cm]{dominator-tree.png}
+
+    \textbf{Dominance tree}
+
+    Immediate dominators of each node: \(a\) is the immediate dominator of \(e\) as neither \(b\) nor \(c\) dominate \(e\) (they aren't on the only path to \(e\)). Both \(a\) and \texttt{ENTRY} are strict dominators of \(e\), but \texttt{ENTRY} can't be the immediate dominator as it dominates \(a\).
+    \end{minipage}
+
+    \begin{minipage}[t]{0.47\textwidth}
+    \vspace{10mm}
+    \(b\) and \(a\) are loop headers, as they have a back-edge going into them.
+    
+    \begin{itemize}
+    \item The loop body for \(b\) is just \(d\), as we can get from \(d\) to \(d\) trivially but can't reach any other nodes without going through \(b\).
+    \item The loop body for \(a\) is every other node except \texttt{ENTRY} and \texttt{EXIT}, as we can \textbf{reach \(e\) from all of them without passing through \(a\)}. Note that without the back-edge from \(d\) to \(b\), \(d\) wouldn't be included as it can't reach \(e\).
+    \end{itemize}
+
+    \vspace{3mm}
+
+    The \textbf{type of loop} can be detected from the flowgraph structure: \(b\) either allows executing the body \(d\) or moving immediately to \(e\) so is a \texttt{while} loop, but in contrast \(a\) unconditionally executes the body (no other outgoing edges), so is a \texttt{do while} loop.
+
+    \vspace{3mm}
+
+    Conditionals are either \texttt{if x then y} or \texttt{if x then y else z}: the structure can also be detected from the flowgraph. Conditionals have the common structure that they always end up at the same block.
+    \end{minipage}
+    \hspace{5mm}
+    \begin{minipage}[t]{0.47\textwidth}
+    \vspace{0pt}
+    \includegraphics[width=\textwidth]{loops.png}
+
+    \includegraphics[width=0.4\textwidth]{if.png}
+    \includegraphics[width=0.4\textwidth]{ifelse.png}
+    \end{minipage}
+
+    \subsection*{Type Reconstruction}
+    {
+        
+    }
 }
 \end{document}
