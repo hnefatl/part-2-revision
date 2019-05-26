@@ -12,6 +12,11 @@
 \usepackage{lmodern}
 \usepackage{graphicx}
 \usepackage{wrapfig}
+\usepackage{ulem}
+\usepackage{marvosym}
+\usepackage{xcolor}
+\usepackage{mathtools}
+\usepackage{todonotes}
 
 \title{\vspace{-2.5cm}Optimising Compilers\vspace{-2cm}}
 \author{}
@@ -35,6 +40,10 @@
 \newcommand{\triple}[3]{\{#1\}\;#2\;\{#3\}}
 \newcommand{\triplem}[3]{\(\triple{#1}{#2}{#3}\)}
 
+\newcommand{\interp}[2][]{\mathcal{#1}[\![#2]\!]}
+
+\newcommand{\lightning}{\text{\Lightning}}
+
 \begin{document}
 \maketitle
 \section*{\texttt{while} Language}
@@ -52,6 +61,162 @@
     \begin{minipage}[t]{0.5\textwidth}
     \(E\) are arithmetic expressions, can't contain program statements and don't have side effects. \(B\) are boolean expressions.
     \end{minipage}
+
+    \subsection*{Dynamic Semantics of \texttt{while}}
+    {
+        Stacks are \textbf{total} functions from program variables to integers (\(s \in \text{Stack} = \text{Var} \rightarrow \mathbb{Z}\)) defining the value of every program variable.
+
+        Define \(\interp[E]{E}(s)\) and \(\interp[B]{B}(s)\) as evaluating the expression in a stack:
+
+        \begin{minipage}[t]{0.48\textwidth}
+        \begin{align*}
+        \interp[E]{N}(s) &= N \\
+        \interp[E]{X}(s) &= s(X) \\
+        \interp[E]{E_1 + E_2}(s) &= \interp[E]{E_1}(s) + \interp[E]{E_2}(s) \\
+        ...
+        \end{align*}
+        \end{minipage}
+        \begin{minipage}[t]{0.48\textwidth}
+        \begin{align*}
+        \interp[B]{\texttt{T}}(s) &= \top \\
+        \interp[B]{\texttt{F}}(s) &= \bot \\
+        \interp[B]{E_1 \leq E_2}(s) &= \begin{cases}
+            \top & \text{, if }\interp[E]{E_1}(s) \leq \interp[E]{E_2}(s) \\
+            \bot & \text{, otherwise}
+        \end{cases} \\
+        ...
+        \end{align*}
+        \end{minipage}
+
+        \begin{gather*}
+        \prftree[r]{}
+        {\interp[E]{E}(s) = N}
+        {\langle X:=E , s \rangle \rightarrow \langle \texttt{skip} , s[X \mapsto N] \rangle}
+        \\
+        \\
+        \prftree[r]{}
+        {\interp[B]{B}(s) = \top}
+        {\langle \texttt{if }B\texttt{ then }C_1\texttt{ else }C_2, s \rangle \rightarrow \langle C_1 , s \rangle}
+        \qquad
+        \prftree[r]{}
+        {\interp[B]{B}(s) = \bot}
+        {\langle \texttt{if }B\texttt{ then }C_1\texttt{ else }C_2, s \rangle \rightarrow \langle C_2 , s \rangle}
+        \\
+        ...
+        \end{gather*}
+
+        A configuration can terminate: \(\exists s'.\; \langle C,s \rangle \rightarrow^* \langle \texttt{skip},s' \rangle\).
+
+        A configuration can fail to terminate: \(\langle C,s \rangle \rightarrow^\omega\).
+    }
+    \subsection*{Interpretations}
+    {
+        Define interpretations of assertions on a specific stack.
+        
+        \begin{itemize}
+        \item \textbf{\(\interp{P}\) is the set of stacks \(s\) which satisfy \(P\)}.
+        \item \textbf{\(\interp{t}(s)\) is the value of interpreting term \(t\) in the stack \(s\)}.
+        \end{itemize} 
+        \vspace{-5mm}
+        \begin{minipage}[t]{0.51\textwidth}
+        \begin{align*}
+        \interp{\bot} &= \emptyset \\
+        \interp{\top} &= \text{Stack} \\
+        \interp{P \vee Q} &= \interp{P} \cup \interp{Q} \\
+        \interp{P \wedge Q} &= \interp{P} \cap \interp{Q} \\
+        \interp{t_1 = t_2} &= \{s\in\text{Stack} \mid \interp{t_1}(s) = \interp{t_2}(s)\} \\
+        \interp{p(t_1, ..., t_n)} &= \{ s\in\text{Stack} \mid \interp{p}(\interp{t_1}(s), ..., \interp{t_n}(s)) \} \\
+        \interp{\forall x.\;P} &= \{s\in\text{Stack} \mid \forall N.\; s[x \mapsto N] \in \interp{P}\} \\
+        \interp{\exists x.\;P} &= \{s\in\text{Stack} \mid \exists N.\; s[x \mapsto N] \in \interp{P}\}
+        \end{align*}
+        \end{minipage}
+        \begin{minipage}[t]{0.47\textwidth}
+        \begin{align*}
+        \interp{B} & = \{s\in\text{Stack} \mid \interp[B]{B}(s) = \top \} \\
+        \interp{f(t_1, ..., t_n)}(s) &= \interp{f}(\interp{t_1}(s), ..., \interp{t_n}(s))
+        \end{align*}
+        \end{minipage}
+
+        Can now define:
+        \[\vDash \triple{P}{C}{Q} \stackrel{\text{def}}{=} \forall s,s'.\; (s\in\interp{P}) \wedge (\langle C,s \rangle \rightarrow^* \langle \texttt{skip},s' \rangle) \implies s' \in \interp{Q]}\]
+    }
+}
+\section*{\texttt{while}\(_p\) Language}
+{
+    \texttt{while} with pointers. Introduce new commands:
+    \begin{alignat*}{2}
+    C ::=& \; &\;&X := [E] \\
+         & | && [E_1] := E_2 \\
+         & | && X := \texttt{alloc}(E_0,...,E_n) \\
+         & | && \texttt{dispose}(E)
+    \end{alignat*}
+
+    Commands are now evaluated with a heap and a stack: \(h\in\text{Heap} = (\text{Loc} \setminus \{\texttt{null}\}) \rightarrow \mathbb{Z}\), \(l\in\text{Loc} = \mathbb{N}\). The existing commands can be easily extended to handle the extra state.
+
+    The new commands \textbf{fail} (\(\lightning\)) if the given locations aren't allocated, but otherwise have straightforward dynamic semantics. Allocating memory needs to find a contiguous block of unallocated memory to place the values in.
+
+    \begin{gather*}
+    \prftree[r]{}
+    {\interp[E]{E}(s) = l}
+    {l \in \text{dom}(h)}
+    {h(l) = N}
+    {\langle X:=[E], s, h \rangle \rightarrow \langle \texttt{skip}, s[X\mapsto N], h \rangle}
+    \qquad
+    \prftree[r]{}
+    {\interp[E]{E}(s) = l}
+    {l \notin \text{Loc}}
+    {\langle X:=[E], s, h \rangle \rightarrow \lightning}
+    \qquad
+    \prftree[r]{}
+    {\interp[E]{E}(s) = l}
+    {l \notin \text{dom}(h)}
+    {\langle X:=[E], s, h \rangle \rightarrow \lightning}
+    \\
+    \\
+    \prftree[r]{}
+    {\interp[E]{E_1}(s) = l}
+    {l \in \text{dom}(h)}
+    {\interp[E]{E_2} = N}
+    {\langle [E_1]:=E_2, s, h \rangle \rightarrow \langle \texttt{skip}, s, h[l \mapsto N] \rangle}
+    \qquad
+    \prftree[r]{}
+    {\interp[E]{E_1}(s) = l}
+    {l\notin\text{Loc}}
+    {\langle [E_1]:=E_2, s, h \rangle \rightarrow \lightning}
+    \qquad
+    \prftree[r]{}
+    {\interp[E]{E_1}(s) = l}
+    {l \notin \text{dom}(h)}
+    {\langle [E_1]:=E_2, s, h \rangle \rightarrow \lightning}
+    \\
+    \\
+    \prftree[r]{}
+    {\interp[E]{E}(s) = l}
+    {l \in \text{dom}(h)}
+    {h(l) = N}
+    {\langle \texttt{dispose}(E), s, h \rangle \rightarrow \langle \texttt{skip}, s, h\setminus\{(l, N)\} \rangle}
+    \quad
+    \prftree[r]{}
+    {\interp[E]{E}(s) = l}
+    {l\notin\text{Loc}}
+    {\langle \texttt{dispose}(E), s, h \rangle \rightarrow \lightning}
+    \quad
+    \prftree[r]{}
+    {\interp[E]{E}(s) = l}
+    {l \notin \text{dom}(h)}
+    {\langle \texttt{dispose}(E), s, h \rangle \rightarrow \lightning}
+    \\
+    \\
+    \prftree[r]{}
+    {\interp[E]{E_0}(s) = N_0}
+    {...}
+    {\interp[E]{E_n}(s) = N_n}
+    {\forall i \in {0,...,n}.\;l+i \notin \text{dom}(h)}
+    {l\neq\texttt{null}}
+    {\langle X:=\texttt{alloc}(E_0,...,E_n), s, h \rangle \rightarrow \langle \texttt{skip}, s[X\mapsto l], h[l\mapsto N_0, ..., l+n\mapsto N_n] \rangle}
+    \end{gather*}
+
+    Allocation introduces non-determinism, as we can use the allocated locations to affect program behaviour.
 }
 \section*{Hoare Logic}
 {
@@ -124,14 +289,109 @@
 
         An SMT solver can then produce a program correctness proof using the deduction system above with the assertions, as it can perform the \(\vdash_\text{FOL}\) proofs.
     }
-    \subsection*{Dynamic Semantics of \texttt{while}}
+    \subsubsection*{Properties of Hoare Logic}
     {
+        \begin{description}
+        \item[Soundness:]
+        {
+            If \(\vdash\triple{P}{C}{Q}\) then \(\vDash\triple{P}{C}{Q}\).
 
+            Any triple derivable using the syntactic proof system also holds semantically.
+        }
+        \item[\sout{Completeness}:]
+        {
+            If \(\vDash\triple{P}{C}{Q}\) then \(\vdash\triple{P}{C}{Q}\).
+
+            The converse of Soundness, Hoare logic \textbf{isn't complete} as it inherits incompleteness from arithmetic.
+        }
+        \item[\sout{Decidability}:]
+        {
+            There's a computable function \(f\) such that \(f(P,C,Q) = \top \Longleftrightarrow \triple{P}{C}{Q}\).
+
+            We can encode Turing machines in the \text{while} language, so as the Halting Problem is undecidable, so is Hoare logic.
+        }
+        \end{description}
     }
 }
 \section*{Separation Logic}
 {
+    Extend Hoare Logic to deal with heaps. The \textbf{frame rule} combined with the \(C_1;C_2\) rule allows us to verify independent subprograms which use distinct program variables. Note that \(\text{mod}(C)\) gives the modified \textbf{program variables}, nothing to do with the heap.
 
+    \begin{gather*}
+    \prftree[r]{}
+    {\vdash\triple{P}{C}{Q}}
+    {\text{mod}(C) \cap \text{fv}(R) = \emptyset}
+    {\vdash\triple{P * R}{C}{Q * R}}
+    \end{gather*}
+
+    Introduce a new \textbf{assertion} \(t_1 \mapsto t_2\), which asserts that heap location \(t_1\) maps to the value \(t_2\) and \textbf{also asserts ownership} of heap location \(t_1\). It's the same syntax as use in the stack and heap, but it's an assertion.
+
+    Introduce the separating conjunction \(*\), where \(P * Q\) asserts \textbf{that \(P\) and \(Q\) hold} (like \(P \wedge Q\)) and further that \textbf{the heap locations owned by \(P\) and \(Q\) are disjoint}. The neutral element for \(*\) is \(\text{emp}\).
+
+    Assertions should now \textbf{always} contain a heap-describing part that \textbf{fully describes the heap}, and a standard propositional part. Eg.\ \(\textcolor{red}{\text{emp}}\textcolor{blue}{\;\wedge\;P \wedge (Q \vee R)}\) and \(\textcolor{red}{(X \mapsto Y * Z \mapsto Y * Q \mapsto W)} \textcolor{blue}{\;\wedge\;P \wedge (Q \vee R)}\).
+
+    \(t_1 \mapsto t_2 \wedge t_3 \mapsto t_4\) means that both \(t_1 \mapsto t_2\) and \(t_3 \mapsto t_4\) fully describe the heap, so \(t_1 = t_3\) and by consequence \(t_2 = t_4\).
+
+    \(t \mapsto X,Y,Z\) is shorthand for \((t \mapsto X) * (t+1 \mapsto Y) * (t+2 \mapsto Z)\).
+
+    Under separation logic, \triplem{P}{C}{Q} means that:
+    \begin{itemize}
+    \item \(C\) doesn't fault when evaluated from an initial state satisfying \(P\) and
+    \item \textbf{For any \(h_1\) satisfying \(P\), if \(C\) is evaluated from an initial state with heap \(h_1 \uplus h_F\) and \(C\) terminates, then the final state has heap \(h_1' \uplus h_F\) where \(h_1'\) satisfies \(Q\)}.
+    \end{itemize}
+
+    The second condition strengthens the version from Hoare Logic to enforce that triples have to satisfy framing, \textbf{by requiring that they preserve any disjoint heaps \(h_F\)}.
+
+    \subsection*{* Proof System}
+    {
+        \begin{adjustwidth}{2cm}{2cm}
+        \centering
+        \[
+        \prftree[r]{}
+        {\vdash\triple{P}{C}{Q}}
+        {\text{mod}(C) \cap \text{FV}(R) = \emptyset}
+        {\vdash\triple{P*R}{C}{Q*R}}
+        \]
+        The frame rule allows composition of subproofs for programs which operate on disjoint subsets of the heap.
+
+        \[
+        \prftree[r]{}
+        {\vdash\triple{P}{C}{Q}}
+        {\vdash\triple{\exists x.\;P}{C}{\exists x.\;Q}}
+        \]
+        The structural \(\exists\) rule allows eliminating existentials that we can't provide a witness for.
+
+        \[
+        \prftree[r]{}
+        {\vdash\triple{\exists x.\;E_1 \mapsto x}{[E_1] := E_2}{E_1 \mapsto E_2}}
+        \]
+        The simpler assignment rule just remaps \(E_1\) to point to \(E_2\), nothing special.
+
+        \[
+        \prftree[r]{}
+        {\vdash\triple{\exists x, v.\; X = x \wedge E \mapsto v}{X := [E]}{X = v \wedge E[x/X] \mapsto v}}
+        \]
+        The more complicated assignment rule updates program variable \(X\) but also has to ensure that \(E\) isn't changed by the update.
+
+        \[
+        \prftree[r]{}
+        {\vdash\triple{X = x \wedge \text{emp}}{X := \texttt{alloc}(E_0,...,E_n)}{X \mapsto E_0[x/X], ..., E_n[x/X]}}
+        \]
+        Allocation introduces a new \(\mapsto\) assertion for every allocated expression.
+
+        \[
+        \prftree[r]{}
+        {\vdash\triple{E \mapsto t}{\texttt{dispose}(E)}{\text{emp}}}
+        \]
+        Deallocation just empties the heap.
+        \end{adjustwidth}
+
+        \(\exists\) is a friend: introduce whenever there's a new variable that's not mentioned in the pre/postconditions, then eliminate it using \(\vdash_\text{FOL}\) when we have a suitable concrete variable, or use the \(\exists\) structural rule to eliminate it from both sides.
+
+        \todo[inline]{Check this is actually how we deal with \(\exists\).}
+    }
+
+    % page 188
 }
 \section*{Model Checking}
 {
