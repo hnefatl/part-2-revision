@@ -1,27 +1,46 @@
-\documentclass[11pt]{article}
+\documentclass[a4paper, 11pt]{article}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{titlesec}
 \usepackage[utf8]{inputenc}
 \usepackage[margin=2cm]{geometry}
 \usepackage{prftree}
 \usepackage{changepage}
+\usepackage{enumitem}
+\usepackage{minted}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{wrapfig}
 
-\title{\vspace{-1cm}Hoare Logic and Model Checking\vspace{-1cm}}
+\title{\vspace{-2.5cm}Optimising Compilers\vspace{-2cm}}
 \author{}
 \date{}
 
 \setlength{\parindent}{0cm}
 \setlength{\parskip}{2mm}
+\setlist{nosep}
 
 % Make ~ look more normal
-\let\oldsim\sim 
+\let\oldsim\sim
 \renewcommand{\sim}{{\oldsim}}
+
+\newmintinline[monospace]{text}{escapeinside=\#\#, mathescape, fontsize=\normalsize}
+\newminted[monospacefigure]{text}{frame=lines, framesep=1mm, autogobble, escapeinside=\#\#, mathescape, breaklines}
+
+\titlespacing{\section}{0mm}{2mm}{2mm}
+\titlespacing{\subsection}{0mm}{2mm}{2mm}
+\titlespacing{\subsubsection}{0mm}{2mm}{2mm}
+
+\newcommand{\triple}[3]{\{#1\}\;#2\;\{#3\}}
+\newcommand{\triplem}[3]{\(\triple{#1}{#2}{#3}\)}
 
 \begin{document}
 \maketitle
 \section*{\texttt{while} Language}
 {
+    \begin{minipage}[t]{0.4\textwidth}
+    \vspace{-7mm}
     \begin{alignat*}{2}
     C ::=& \; &\;&\text{skip} \\
          & | &&C_1 ; C_2 \\
@@ -29,5 +48,93 @@
          & | &&\text{if }B\text{ then }C_1\text{ else }C_2 \\
          & | &&\text{while }B\text{ do }C
     \end{alignat*}
+    \end{minipage}
+    \begin{minipage}[t]{0.5\textwidth}
+    \(E\) are arithmetic expressions, can't contain program statements and don't have side effects. \(B\) are boolean expressions.
+    \end{minipage}
+}
+\section*{Hoare Logic}
+{
+    \triplem{P}{C}{Q} holds semantically (\(\vDash \triple{P}{C}{Q}\)) iff \(C\) executed in an initial state satisfying \(P\) either fails to terminate or terminates with a state satisfying \(Q\).
+
+    \textbf{\(\{P\}\;C\;\{Q\}\) always holds if \(C\) doesn't terminate}.
+
+    \begin{itemize}
+    \item \(\vDash \triple{\bot}{C}{Q}\): says nothing about \(C\) as \(\bot\) never holds in an initial state.
+    \item \(\vDash \triple{\top}{C}{Q}\): says that whenever \(C\) halts, \(Q\) holds.
+    \item \(\vDash \triple{P}{C}{\top}\): holds for any \(P\) and \(C\), as \(\top\) always holds in the terminal state.
+    \item \(\vDash \triple{P}{C}{\bot}\): says that \(C\) \textbf{doesn't halt}, as \(\bot\) can never hold in a terminal state.
+    \end{itemize}
+
+    \textbf{Auxiliary Variables} are used to refer to initial values of program variables, so we can meaningfully represent changes in variables.
+
+    \subsection*{Proof System}
+    {
+        \(\vdash_\text{FOL}P\) holds if we can show \(P\) holds in first-order-logic.
+        \begin{gather*}
+        \prftree[r]{}
+        {\vdash \triple{P}{\texttt{skip}}{P}}
+        \qquad
+        \prftree[r]{}
+        {\vdash \triple{P[E/X]}{X := E}{P}}
+        \qquad
+        \prftree[r]{}
+        {\vdash \triple{P}{C_1}{Q}}
+        {\vdash \triple{Q}{C_2}{R}}
+        {\vdash \triple{P}{C_1;C_2}{R}}
+        \\
+        \\
+        \prftree[r]{}
+        {\vdash \triple{P \wedge B}{C_1}{Q}}
+        {\vdash \triple{P \wedge \neg B}{C_2}{Q}}
+        {\vdash \triple{P}{\texttt{if }B\texttt{ then }C_1\texttt{ else }C_2}{Q}}
+        \qquad
+        \prftree[r]{}
+        {\vdash \triple{P \wedge B}{C}{P}}
+        {\vdash \triple{P}{\texttt{while }B\texttt{ do }C}{P \wedge \neg B}}
+        \\
+        \\
+        \prftree[r]{}
+        {\vdash_\text{FOL} P_1 \implies P_2}
+        {\vdash \triple{P_2}{C}{Q_2}}
+        {\vdash_\text{FOL} Q_2 \implies Q_1}
+        {\vdash \triple{P_1}{C}{Q_1}}
+        \end{gather*}
+    }
+    \subsection*{Proof Outlines}
+    {
+        Rather than writing full trees, it's clearer to write proofs vertically as proof outlines. Annotate each command with the pre- and post- condition of each subcommand. Sequences of assertions indicate use of the rule of consequence, and we omit sides which don't change the assertions, along with the derivations of implications.
+
+        Every assertion needs to imply the next, so we need enough information in each one. Generally only an issue when deciding on a loop invariant.
+    }
+    \subsection*{Loop Invariants}
+    {
+        The \(P\) used in the loop rule:
+        \begin{itemize}
+        \item Must hold initially.
+        \item Must be preserved by the loop body when \(B\) is true.
+        \item Must imply some desired postcondition when \(B\) is false.
+        \end{itemize}
+
+        Can normally work out what it is by looking at what stays the same on each iteration of the loop, and what we can use with \(\neg B\) to reach the desired postcondition. Also need to include any information that's used to make the implications in the body make sense.
+    }
+    \subsection*{Verification Condition Generation}
+    {
+        Finding loop invariants is difficult. Code that's been annotated with loop invariants (\(C_a\)) can be fed to a verification condition generator, along with a precondition \(P\) and postcondition \(Q\), to get a set of assertions on program variables \(\text{VC}(P,C_a,Q)\). If all the assertions hold, then \triplem{P}{C}{Q} holds.
+
+        An SMT solver can then produce a program correctness proof using the deduction system above with the assertions, as it can perform the \(\vdash_\text{FOL}\) proofs.
+    }
+    \subsection*{Dynamic Semantics of \texttt{while}}
+    {
+
+    }
+}
+\section*{Separation Logic}
+{
+
+}
+\section*{Model Checking}
+{
+
 }
 \end{document}
