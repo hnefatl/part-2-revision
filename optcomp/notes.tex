@@ -59,7 +59,7 @@ Optimisation = Analysis + Transformation
     \item Mark every procedure called from a marked procedure as reachable, repeat until no change.
     \end{enumerate}
 
-    Function pointers (indirect calls) have the same safety issues as \texttt{goto} above. Can improve by only adding functions which are address-taken somewhere in the program, rather than all procedures.
+    Function pointers (indirect calls) have the same safety issues as \texttt{goto} above. Can improve by only adding functions which are \textbf{address-taken} somewhere in the program, rather than all procedures.
 }
 \section*{Live Variable Analysis (LVA)}
 {
@@ -114,9 +114,9 @@ Optimisation = Analysis + Transformation
 
             If we find that we need to spill during register allocation, just restart the register allocation with one register reserved as `temporary' for the spilled value. If we find another spill, reserve another register, and so on (up to the max number of operands per instruction).
         }
-        \subsubsection*{Non-orthogonal instructions}
+        \subsubsection*{* Non-orthogonal instructions}
         {
-            Instructions that always write to a predetermined register (eg.\ `multiply and store the result in \monospace{r0}') mess up the allocation, as do procedure calls (which use eg.\ registers \monospace{r\{0..4\}} as argument registers and \monospace{r\{5..10\}} as being preserved over function calls).
+            Instructions that always write to a predetermined register (eg.\ `multiply and store the result in \monospace{r0}') mess up the allocation, as do procedure calls (which use eg.\ registers \monospace{r{0..4}} as argument registers and \monospace{r{5..10}} as being preserved over function calls).
 
             \begin{itemize}
             \item Reserve virtual registers for all architectural registers that have special usage (the registers used for results/function arguments).
@@ -153,7 +153,7 @@ Optimisation = Analysis + Transformation
 
     \subsubsection*{Common Subexpression Elimination}
     {
-        If an expression is computed both at \(n\) and on a node on all paths to \(n\), then we can arrange for all the prior computations to store their results in a local variable so we don't need to evaluate the expression again.
+        If an expression is computed both at \(n\) and \textbf{on a node on all paths to \(n\)}, then we can arrange for all the prior computations to store their results in a local variable so we don't need to evaluate the expression again.
 
         \begin{enumerate}
         \item For each node \(n\) containing \monospace{x = a #\(\oplus\)# b} with \monospace{a #\(\oplus\)# b} available at \(n\):
@@ -178,7 +178,9 @@ Optimisation = Analysis + Transformation
 
     SSA uses a new variable for every assignment, which \textbf{minimises the live ranges of each variable}, so allows for \textbf{more efficient register allocation}.
 
-    When paths merge in the flowgraph we need to ensure that temporaries of the same variable which were assigned to on the branches have their values updated into one variable. Can use \(\phi\) functions, which are usually just a theoretical concept: \monospace{x = #\(\phi\)#(x1, x2)} means \monospace{x = x1} if control took a left branch and \monospace{x = x2} if control took a right branch. The \textbf{register allocation pass} can arrange for \monospace{x1} and \monospace{x2} to be assigned to the \textbf{same register}. On some architectures this might not always be possible, so the final resort is to implement an actual branch to update the variables properly.
+    When \textbf{paths merge} in the flowgraph we need to ensure that temporaries of the same variable which were assigned to on the branches have their values updated into one variable. Can use \(\phi\) functions, which are usually just a theoretical concept: \monospace{x = #\(\phi\)#(x1, x2)} means \monospace{x = x1} if control took a left branch and \monospace{x = x2} if control took a right branch. The \textbf{register allocation pass} can arrange for \monospace{x1} and \monospace{x2} to be assigned to the \textbf{same register}. On some architectures this might not always be possible, so the final resort is to implement an actual branch to update the variables properly.
+
+    Technically need \(\phi\) nodes whenever edges converge into a single node in the flowgraph.
 
     Always remember \textbf{live ranges}, they can be great for visualising liveness.
 }
@@ -190,14 +192,14 @@ Optimisation = Analysis + Transformation
 {
     Simple syntax rewriting, replacing eg.\ \monospace{x = 1 + 2} with \monospace{x = 3} or \monospace{[1,2] ++ [3,4]} with \monospace{[1,2,3,4]}.
 }
-\section*{Strength Reduction}
+\section*{* Strength Reduction}
 {
     Generally, switch expensive instructions for cheaper ones. Specifically for loops:
 
     \begin{enumerate}
     \item Find induction variables which are used as \monospace{i = i #\(\oplus\) c#}.
     \item Find another variable \monospace{j = (i #\(\otimes\)# c1) #\(\oplus\)# c2}.
-    \item Move the assigment \monospace{j = (i #\(\otimes\)# c1) #\(\oplus\)# c2} to above the loop.
+    \item Move the assignment \monospace{j = (i #\(\otimes\)# c1) #\(\oplus\)# c2} to \textbf{above} the loop.
     \item Add an end-of-loop-body instruction \monospace{j = j #\(\oplus\)# (c1 #\(\otimes\)# c)}.
     \end{enumerate}
 
@@ -219,6 +221,15 @@ Optimisation = Analysis + Transformation
         tot += 10 * a;
     \end{monospacefigure}
     \end{minipage}
+
+    \vspace{3mm}
+    Specifically for addition and multiplication, for easy of remembering the general idea:
+    \begin{enumerate}
+    \item Find induction variables which are used as \monospace{i = c + i}.
+    \item Find another variable \monospace{j = i * c1 + c2}.
+    \item Move the assignment \monospace{j = i * c1 + c2} to above the loop.
+    \item Add an end-of-loop-body instruction \monospace{j = j + c1 * c}.
+    \end{enumerate}
 }
 \section*{Abstract Interpretation}
 {
