@@ -4,7 +4,7 @@
 \usepackage{amssymb}
 \usepackage{titlesec}
 \usepackage[utf8]{inputenc}
-\usepackage[margin=2cm]{geometry}
+\usepackage[margin=1.5cm]{geometry}
 \usepackage{prftree}
 \usepackage{changepage}
 \usepackage{enumitem}
@@ -17,8 +17,9 @@
 \usepackage{xcolor}
 \usepackage{mathtools}
 \usepackage{todonotes}
+\usepackage{bm}
 
-\title{\vspace{-2.5cm}Optimising Compilers\vspace{-2cm}}
+\title{\vspace{-2cm}Hoare Logic and Model Checking\vspace{-2cm}}
 \author{}
 \date{}
 
@@ -39,10 +40,14 @@
 
 \newcommand{\triple}[3]{\{#1\}\;#2\;\{#3\}}
 \newcommand{\triplem}[3]{\(\triple{#1}{#2}{#3}\)}
+\newcommand{\ttriple}[3]{[#1]\;#2\;[#3]}
 
 \newcommand{\interp}[2][]{\mathcal{#1}[\![#2]\!]}
 
 \newcommand{\lightning}{\text{\Lightning}}
+
+\newcommand{\doubleplus}{+\kern-1.3ex+\kern0.8ex}
+\newcommand{\ditto}{\text{---}\cdot\cdot\,\text{---}}
 
 \begin{document}
 \maketitle
@@ -344,6 +349,7 @@
 
     \subsection*{* Proof System}
     {
+        \parskip 0pt
         \begin{adjustwidth}{2cm}{2cm}
         \centering
         \[
@@ -353,48 +359,314 @@
         {\vdash\triple{P*R}{C}{Q*R}}
         \]
         The frame rule allows composition of subproofs for programs which operate on disjoint subsets of the heap.
-
+        \end{adjustwidth}
+        \begin{adjustwidth}{2cm}{2cm}
+        \centering
         \[
         \prftree[r]{}
         {\vdash\triple{P}{C}{Q}}
         {\vdash\triple{\exists x.\;P}{C}{\exists x.\;Q}}
         \]
-        The structural \(\exists\) rule allows eliminating existentials that we can't provide a witness for.
+        The structural \(\exists\) rule allows generalising axioms that deal with fixed auxiliary variables (those below) to ones wrapped in \(\exists\). This is extremely important as separation logic should end up with lots of quantified variables for the various unknown values on the heap.
 
+        The usage is `axiom stacked on exists rule stacked on consequence rule', where the implications transform into and out of the quantified versions.
+        \end{adjustwidth}
+        \begin{adjustwidth}{2cm}{2cm}
+        \centering
         \[
         \prftree[r]{}
-        {\vdash\triple{\exists x.\;E_1 \mapsto x}{[E_1] := E_2}{E_1 \mapsto E_2}}
+        {\vdash\triple{E_1 \mapsto x}{[E_1] := E_2}{E_1 \mapsto E_2}}
         \]
         The simpler assignment rule just remaps \(E_1\) to point to \(E_2\), nothing special.
-
+        \end{adjustwidth}
+        \begin{adjustwidth}{2cm}{2cm}
+        \centering
         \[
         \prftree[r]{}
-        {\vdash\triple{\exists x, v.\; X = x \wedge E \mapsto v}{X := [E]}{X = v \wedge E[x/X] \mapsto v}}
+        {\vdash\triple{X = x \wedge E \mapsto v}{X := [E]}{X = v \wedge E[x/X] \mapsto v}}
         \]
         The more complicated assignment rule updates program variable \(X\) but also has to ensure that \(E\) isn't changed by the update.
-
+        \end{adjustwidth}
+        \begin{adjustwidth}{2cm}{2cm}
+        \centering
         \[
         \prftree[r]{}
         {\vdash\triple{X = x \wedge \text{emp}}{X := \texttt{alloc}(E_0,...,E_n)}{X \mapsto E_0[x/X], ..., E_n[x/X]}}
         \]
         Allocation introduces a new \(\mapsto\) assertion for every allocated expression.
-
+        \end{adjustwidth}
+        \begin{adjustwidth}{2cm}{2cm}
+        \centering
         \[
         \prftree[r]{}
         {\vdash\triple{E \mapsto t}{\texttt{dispose}(E)}{\text{emp}}}
         \]
         Deallocation just empties the heap.
         \end{adjustwidth}
-
-        \(\exists\) is a friend: introduce whenever there's a new variable that's not mentioned in the pre/postconditions, then eliminate it using \(\vdash_\text{FOL}\) when we have a suitable concrete variable, or use the \(\exists\) structural rule to eliminate it from both sides.
-
-        \todo[inline]{Check this is actually how we deal with \(\exists\).}
     }
+    \subsection*{* Proof Outlines}
+    {
+        Don't need to show all the complicated uses of the frame/structural rules, can just give a high-level outline using the rule of consequence. Still need to make sure that the assertions given logically follow.
 
-    % page 188
+        \textbf{Introduce exists-bound variable for \textit{any} variable not already existing in the pre/postcondition}, regardless of whether it's an auxiliary variable or a mathematical variable, such as \(\exists y,\alpha,\beta.\;\text{list}(y,a::b)\).
+
+        \textbf{The \(X := [E]\) rule will eliminate an \(\exists\)-bound variable} \(\alpha\) (assuming \(E\mapsto\alpha\)), as it should introduce an \(X=\alpha\) assertion which can be used to trivially derive a version of the assertion without the \(\exists\alpha\), replacing \(\alpha\) with \(E\) throughout.
+
+        Using mathematical operations in assertions is fine: \((X = Y \wedge \alpha = \beta :: \gamma) * \text{list}(Z, \alpha \doubleplus \alpha)\).
+
+        Example proof outline for:
+        \begin{align*}
+        & \{\text{list}(X,\alpha) \wedge X \neq \texttt{null}\} \\
+        & E:=[X];\;P:=[X+1];\;Y:=\texttt{alloc}(E,P);\;\texttt{dispose}(X);\;\texttt{dispose}(X+1) \\
+        & \{\text{list}(Y,\alpha) \wedge Y \neq \texttt{null}\}
+        \end{align*}
+        \begin{align*}
+        & \{\text{list}(X,\alpha) \wedge X \neq \texttt{null}\} \\
+        & \{\exists y,\beta,\gamma.\; (\text{list}(y, \gamma) * X \mapsto \beta,y) \wedge \alpha=\beta::\gamma\} \\
+        & E := [X]; \\
+        & \{\exists y,\beta,\gamma.\; (\text{list}(y, \gamma) * X \mapsto \beta,y) \wedge \alpha=\beta::\gamma \wedge E = \beta\} \\
+        & \{\exists y,\gamma.\; (\text{list}(y, \gamma) * X \mapsto E,y) \wedge \alpha=E::\gamma\} \tag*{Note that we removed \(\exists \beta\) using \(E=\beta\).} \\
+        & P := [X+1]; \\
+        & \{\exists \gamma.\; (\text{list}(P, \gamma) * X \mapsto E,P) \wedge \alpha=E::\gamma\} \\
+        & Y := \texttt{alloc}(E,P) \\
+        & \{\exists \gamma.\; (\text{list}(P, \gamma) * X \mapsto E,P * Y \mapsto E,P) \wedge \alpha=E::\gamma\} \\
+        & \{(\text{list}(Y, \alpha) * X \mapsto E,P) \wedge Y \neq \texttt{null}\} \tag*{Repacking with the definition of \(\text{list}(Y, E::\gamma)\).} \\
+        & \texttt{dispose}(X);\;\texttt{dispose}(X + 1); \\
+        & \{\text{list}(Y,\alpha) \wedge Y \neq \texttt{null}\}
+        \end{align*}
+    }
+    \subsection*{Loop Invariants}
+    {
+        Loop invariants are more complicated in \(\texttt{while}_p\) as the invariant needs to carry enough information to fully specify the heap on each iteration.
+    }
+    \subsection*{Datatypes}
+    {
+        \begin{description}
+        \item[Lists]
+        {
+            \hfill
+
+            The list predicate \(\text{list}(t, \alpha\) associates a program variable \(t\) with the mathematical representation of the list it describes \(\alpha\):
+            \begin{flalign*}
+            & \text{list}(t, []) = \text{emp} \wedge t = \texttt{null} && \\
+            & \text{list}(t, \beta::\gamma) = \exists y.\;(t \mapsto \beta,y) * \text{list}(y, \gamma) &&
+            \end{flalign*}
+        }
+        \item[Partial Lists]
+        {
+            \hfill
+
+            Partial lists \(\text{plist}(t_1,\alpha,t_2)\) represent a prefix of a list where \(t_1\) points to a list representing \(\alpha\) with tail pointer \(t_2\):
+            \begin{flalign*}
+            & \text{plist}(t_1, [], t_2) = \text{emp} \wedge t_1 = t_2 && \\
+            & \text{plist}(t_1, \beta::\gamma, t_2) = \exists y.\;(t_1 \mapsto \beta,y) * \text{plist}(y, \gamma, t_2) &&
+            \end{flalign*}
+
+            Useful for describing sections of lists: \(\text{list}(t, \beta \doubleplus \gamma) \Longleftrightarrow \exists y.\;\text{plist}(t, \beta, y) * \text{list}(y, \gamma)\).
+        }
+        \item[Circular Lists]
+        {
+            \hfill
+
+            \(\text{clist}(X, \alpha) = \text{plist}(X, \alpha, X)\)
+        }
+        \end{description}
+    }
+}
+\section*{Total Correctness}
+{
+    A total correctness triple strengthens partial correctness triples to further assert that the command halts.
+    \begin{align*}
+    \vDash \ttriple{P}{C}{Q} \equiv \forall s.\;s \in \interp{P} \implies & (\neg \langle C,s \rangle) \rightarrow^\omega) \;\wedge \\
+    & (\forall s'.\; \langle C,s \rangle \rightarrow^* \langle \texttt{skip},s' \rangle \implies s' \in \interp{Q]})
+    \end{align*}
+
+    All normal proof rules are the same except for the loop rule:
+
+    \begin{equation*}
+    \prftree[r]{}
+    {\vdash\triple{P \wedge B \boldsymbol{\wedge (t = n)}}{C}{P \boldsymbol{\wedge (t < n)}}}
+    {\boldsymbol{\vdash_\text{FOL} P \wedge B \implies t \geq 0}}
+    {\vdash\triple{P}{\texttt{while }B\texttt{ do }C}{P \wedge \neg B}}
+    \end{equation*}
+
+    The \textbf{variant} \(t\) is a term that decreases from some start auxiliary variable \(n\) and is non-negative. The variant can be any term, it doesn't have to occur in the command.
 }
 \section*{Model Checking}
 {
+    Model checking is exhaustive search for solutions: automatic and easier than Hoare logic, but requires finite models.
 
+    If a model fails to verify a proposition, it can report why: eg.\ which path through the state space failed to satisfy it. Means we can prove things by asking for a proof of a refutation.
+
+    \subsection*{Kripke Structures}
+    {
+        A finite Kripke structure is a tuple \((S,S_0,R,L)\):
+        \begin{itemize}
+        \item \(S\) is a finite set of states.
+        \item \(S_0 \subseteq S\) is a set of start states.
+        \item \(R : S \rightarrow S\) is the transition \textbf{relation}.
+        \item \(L : S \rightarrow \mathcal{P}(AP)\) is the labelling function specifying what properties hold in which states.
+        \end{itemize}
+
+        \(AP\) are a given set of atomic properties. We can model finite state automata by including inputs as possible state.
+
+        A \textbf{path} in the transition system \((S, R)\) is a function \(\pi : \mathbb{N} \rightarrow S\):
+        \begin{itemize}
+        \item \(\pi(i)\) is the \(i\)\textsuperscript{th} element of \(\pi\) (first element is \(\pi(0)\)).
+        \item \(\pi \downarrow i\) is \monospace{drop i #\(\pi\)#}, the \(i\)\textsuperscript{th} tail of \(\pi\).
+        \end{itemize}
+
+        \(\text{Path}\;R\;s\;\pi\) defines that \(\pi\) is a path from \(s\), and is true iff \(\pi(0) = s \wedge \forall i.\;R\;(\pi(i))\;(\pi(i+1))\).
+    }
+    \subsection*{Symbolic Model Checking}
+    {
+        Some models are too big, like a system with \(n\) flip-flops has \(2^n\) states which gets intractable fast. Can instead represent the system as operations on BDDs, states as specific tuples. Generally more efficient.
+    }
+    \subsection*{Linear Temporal Logic (LTL)}
+    {
+        \(M = (S,S_0,R,L) \vDash \phi\) means that \(\phi\) holds on all \(R\)-paths starting from a member of \(S_0\):
+        \[\forall \pi,s.\; (s \in S_0 \wedge \text{Path}\;R\;s\;\pi) \implies \interp{\phi}_M(\pi)\]
+        Where \(\interp{\phi}_M(\pi)\) is defined as:
+
+        \vspace{-8mm}
+        \begin{minipage}[t]{0.3\textwidth}
+        \begin{alignat*}{2}
+        \phi ::=& \; &\;& p \tag*{Atomic proposition} \\
+                & | && \neg \phi \tag*{Negation} \\
+                & | && \phi_1 \vee \phi_2 \tag*{Disjunction} \\
+                & | && ... \\
+                & | && X\phi \tag*{Successor} \\
+                & | && F\phi \tag*{Sometimes} \\
+                & | && G\phi \tag*{Always} \\
+                & | && [\phi_1\;U\;\phi_2] \tag*{Until}
+        \end{alignat*}
+        \end{minipage}
+        \hspace{4mm}
+        \begin{minipage}[t]{0.66\textwidth}
+        \begin{alignat*}{2}
+        &\interp{p}_M(\pi)                   &&= p \in L(\pi(0)) \\
+        &\interp{\neg \phi}_M(\pi)           &&= \neg(\interp{\phi}_M(\pi)) \\
+        &\interp{\phi_1 \vee \phi_2}_M(\pi)  &&= \interp{\phi_1}_M(\pi) \vee \interp{\phi_2}_M(\pi) \\
+        &                                    &&\,... \\
+        &\interp{X\phi}_M(\pi)               &&= \interp{\phi}_M(\pi \downarrow 1) \\
+        &\interp{F\phi}_M(\pi)               &&= \exists i \geq 0.\; \interp{\phi}_M(\pi \downarrow i) \\
+        &\interp{G\phi}_M(\pi)               &&= \forall i \geq 0.\; \interp{\phi}_M(\pi \downarrow i) \\
+        &\interp{[\phi_1\;U\;\phi_2]}_M(\pi) &&= \exists i \geq 0.\; \Big[\interp{\phi_2}_M(\pi \downarrow i)\Big] \wedge \Big[\forall j < i.\; \interp{\phi_1}_M(\pi \downarrow j)\Big]
+        \end{alignat*}
+        \end{minipage}
+
+        LTL quantifies over \textbf{all paths}: the formula must hold on \textbf{any path} through the system.
+
+        \begin{itemize}
+        \item \(G(F\phi)\): \(\phi\) holds \textbf{infinitely often} along every path (at each state on every path, somewhere further along the path there's a state in which \(\phi\) holds).
+        \item \(F(G\phi)\): \(\phi\) eventually \(\phi\) holds permanently (on all paths, there's a point after which \(\phi\) holds for all states).
+        \item \(G(\phi \implies F\psi)\): if \(\phi\) holds in any state in the path, then there is some state further along in which \(\psi\) holds.
+        \item \(G(\phi \implies [\phi\;U\;\psi])\): if \(\phi\) holds at any state in the path, then it will continue to hold at least until \(\psi\) holds.
+        \end{itemize}
+    }
+    \subsection*{Computation Tree Logic (CTL)}
+    {
+        CTL expresses properties of \textbf{states}, and reasons about possible paths (all paths from here, some paths from here, ...). Doesn't really reason about trees, we just consider paths through subtrees.
+
+        Define \((S,S_0,R,L)\vDash\psi\) as \(\forall s\in S_0.\;\interp{\psi}_M(s)\). LTL considers all paths, CTL just starts us off at the start states.
+
+        \vspace{-8mm}
+        \hspace{-7mm}
+        \begin{minipage}[t]{0.35\textwidth}
+        \begin{alignat*}{2}
+        \psi ::=& \; &\;& p \tag*{Atomic proposition} \\
+                & | && \neg \psi \tag*{Negation} \\
+                & | && \psi_1 \vee \psi_2 \tag*{Disjunction} \\
+                & | && ... \\
+                & | && AX\psi \tag*{All successors} \\
+                & | && EX\psi \tag*{Some successors} \\
+                & | && A[\psi_1\;U\;\psi_2] \\
+                &   && \tag*{Until, along all paths} \\
+                & | && E[\psi_1\;U\;\psi_2] \\
+                &   && \tag*{Until, along some paths} \\
+                & | && AF\psi = A[\texttt{T}\;U\;\psi] \\
+                & | && EF\psi = E[\texttt{T}\;U\;\psi] \\
+                & | && AG\psi = \neg EF(\neg\psi) \\
+                & | && EG\psi = \neg AF(\neg\psi) \\
+                & | && \bf{A[\psi_1\;W\;\psi_2]} \\
+                & | && \bf{E[\psi_1\;W\;\psi_2]}
+        \end{alignat*}
+        \end{minipage}
+        \hspace{4mm}
+        \begin{minipage}[t]{0.7\textwidth}
+        \begin{alignat*}{2}
+        &\interp{p}_M(s)                    &&= p \in L(s) \\
+        &\interp{\neg \psi}_M(s)            &&= \neg(\interp{\psi}_M(s)) \\
+        &\interp{\psi_1 \vee \psi_2}_M(s)   &&= \interp{\psi_1}_M(s) \vee \interp{\psi_2}_M(s) \\
+        &                                   &&\,... \\
+        &\interp{AX\psi}_M(s)               &&= \forall s'.\; R\;s\;s' \implies \interp{\psi}_M(s') \\
+        &\interp{EX\psi}_M(s)               &&= \exists s'.\; R\;s\;s' \wedge \interp{\psi}_M(s') \\
+        &\interp{A[\psi_1\;U\;\psi_2]}_M(s) &&= \forall \pi.\; \text{Path}\;R\;s\;\pi \implies \\
+        &       &&\qquad \exists i \geq 0.\; [\interp{\psi_2}_M(\pi(i))] \wedge [\forall j < i.\;\interp{\psi_1}_M(\pi(j))] \\
+        &\interp{E[\psi_1\;U\;\psi_2]}_M(s) &&= \exists \pi.\; \text{Path}\;R\;s\;\pi \implies \ditto
+        \end{alignat*}
+        \begin{flalign*}
+        &\qquad\text{somewhere on all paths from \(s\).} \hfill && \\
+        &\qquad\text{somewhere on some path from \(s\).} \hfill && \\
+        &\qquad\text{always on all paths from \(s\).} \hfill && \\
+        &\qquad\text{always on some path from \(s\).} \hfill && \\
+        &\qquad\bf{=\neg E[(\psi_1 \wedge \neg\psi_2)\;U\;(\neg\psi_1 \wedge \neg\psi_2)]}\qquad(\text{Unless, along all paths})&& \\
+        &\qquad\bf{=\neg A[(\psi_1 \wedge \neg\psi_2)\;U\;(\neg\psi_1 \wedge \neg\psi_2)]}\qquad(\text{Unless, along some paths}) &&
+        \end{flalign*}
+        \end{minipage}
+
+        \(A[\psi_1\;W\;\psi_2]\) and \(E[\psi_1\;W\;\psi_2]\) are the partial-correctness versions of \(A[\psi_1\;U\;\psi_2]\) and \(E[\psi_1\;U\;\psi_2]\): they hold if either:
+        \begin{itemize}
+        \item \(\psi_1\) always holds along the path (an `infinite loop'), or if
+        \item \(\psi_1\) holds up to a finite point then \(\psi_2\) holds after that point.
+        \end{itemize}
+
+        Examples:
+        \begin{itemize}
+        \item \(EF(\phi \wedge \psi)\): it's possible to reach a state where \(\phi\wedge\psi\) holds (there exists a path where at some point \(\phi\wedge\psi\)).
+        \item \(AG(\phi \implies AF \psi)\): if \(\phi\) holds in any state, then at some point in the future \(\psi\) will hold.
+        \item \(AG(AF\phi)\): from any state, you can reach a state where \(\phi\) holds, so \(\phi\) holds infinitely often along every path.
+        \item \(AG(\text{Req} \implies AX(A[\neg\text{Req}\;U\;\text{Ack}]))\): If Req holds in any state, then at some point later Ack will hold, and until that point Req will be false. The \(AX\) isn't necessary.
+        \end{itemize}
+    }
+    \subsection*{Model Checking}
+    {
+        For LTL, consider every path defined by \(R\) from \(S_0\) and just check the formula holds using the semantic definition.
+
+        For CTL, compute \(F(\psi) = \{s \mid \interp{\psi}_M(s)\}\) using top-down dynamic programming (just recursion with caching), then check that \(S_0 \subseteq F(\psi)\). Symbolic model checking represents the sets as BDDs.
+        \begin{itemize}
+        \item \(F(p) = \{s \mid p \in L(s)\}\)
+        \item \(F(AX \psi) = \{s \mid \forall s'.\; R\;s\;s' \wedge s' \in F(\psi)\}\): the states where all successors satisfy the subformula.
+        \item \(F(EX \psi) = \{s \mid \exists s'.\; R\;s\;s' \wedge s' \in F(\psi)\}\): the states where at least one successor satisfies the subformula.
+        \item \(F([\psi_1\;U\;\psi_2])\): mark all states in \(F(\psi_2)\), then mark all states in \(F(\psi_1)\) with a successor that's marked, and repeat until we reach a fixed point.
+        \item ...
+        \end{itemize}
+    }
+    \subsection*{LTL vs CTL}
+    {
+        \subsubsection*{LTL can't, CTL can}
+        {
+            \begin{minipage}[t]{0.7\textwidth}
+            \textbf{Every path in \(M\) is also a path in \(M'\)}, so if \(M\vDash\phi\) then \(M'\vDash\phi\).
+
+            However, \(\phi \equiv\) \textbf{``can always reach a state satisfying P''} holds in \(M\) but not \(M'\), so there's a contradiction.
+
+            LTL can't express that \textbf{there exists a path}, it can only reason about all or some paths that exist.
+            \end{minipage}
+            \begin{minipage}[t]{0.25\textwidth}
+            \vspace{-2pt}
+            \includegraphics[width=\textwidth]{ltl-inexpressible.png}
+            \end{minipage}
+
+            CTL would express this as \(AG(EF\;\text{P})\): from any state, there's always a path to a state where P holds.
+        }
+        \subsubsection*{CTL can't, LTL can}
+        {
+            % pg 107
+            % Finish this off quickly, do final lecture that I skipped, then supo work.
+            % That's all the revision time I can spare for Hoare, chalk it up as done and move on to MSS?
+            % Could do with skimming over Types and CompArch to refresh.
+        }
+    }
 }
 \end{document}
