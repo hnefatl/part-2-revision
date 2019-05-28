@@ -437,7 +437,7 @@
     }
     \subsection*{Loop Invariants}
     {
-        Loop invariants are more complicated in \(\texttt{while}_p\) as the invariant needs to carry enough information to fully specify the heap on each iteration.
+        Loop invariants are more complicated in \(\texttt{while}_p\) as the invariant \textbf{needs to carry enough information to fully specify the heap on each iteration}.
     }
     \subsection*{Datatypes}
     {
@@ -473,13 +473,12 @@
         \end{description}
     }
 }
-\section*{Total Correctness}
+\section*{* Total Correctness}
 {
     A total correctness triple strengthens partial correctness triples to further assert that the command halts.
-    \begin{align*}
-    \vDash \ttriple{P}{C}{Q} \equiv \forall s.\;s \in \interp{P} \implies & (\neg \langle C,s \rangle) \rightarrow^\omega) \;\wedge \\
-    & (\forall s'.\; \langle C,s \rangle \rightarrow^* \langle \texttt{skip},s' \rangle \implies s' \in \interp{Q]})
-    \end{align*}
+    \[
+    \vDash \ttriple{P}{C}{Q} \equiv \forall s.\;s \in \interp{P} \implies \Big[\neg \langle C,s \rangle \rightarrow^\omega\Big] \wedge \Big[\forall s'.\; \langle C,s \rangle \rightarrow^* \langle \texttt{skip},s' \rangle \implies s' \in \interp{Q}\Big]
+    \]
 
     All normal proof rules are the same except for the loop rule:
 
@@ -662,11 +661,91 @@
         }
         \subsubsection*{CTL can't, LTL can}
         {
-            % pg 107
-            % Finish this off quickly, do final lecture that I skipped, then supo work.
-            % That's all the revision time I can spare for Hoare, chalk it up as done and move on to MSS?
-            % Could do with skimming over Types and CompArch to refresh.
+            `On every path there is a point after which \(p\) is always true \textbf{on that path}'.
+
+            Want something like \(AF\psi\) where \(\psi\) is `\(p\) is true from this state on', but in CTL \(\psi\) has to start with a path quantifier \(A\) or \(E\), which talks about \textbf{all or some paths rather than the current path}.
+
+            LTL can express this as \(F(G\,p)\).
         }
+    }
+    \subsection*{CTL*}
+    {
+        Combine LTL and CTL: can describe path formulae and state formulae:
+
+        \begin{minipage}[t]{0.3\textwidth}
+        \vspace{-8mm}
+        \begin{alignat*}{2}
+        \phi ::=& \; &\;& \psi \\
+                & | && \neg \phi \tag*{Negation} \\
+                & | && \phi_1 \vee \phi_2 \tag*{Disjunction} \\
+                & | && ... \\\
+                & | && X\phi \tag*{Successor} \\
+                & | && F\phi \tag*{Sometimes} \\
+                & | && G\phi \tag*{Always} \\
+                & | && [\phi_1\;U\;\phi_2] \tag*{Until} \\
+        \\
+        \psi ::=& \; &\;& p \tag*{Atomic formula} \\
+                & | && \neg \psi \tag*{Negation} \\
+                & | && \psi_1 \vee \psi_2 \tag*{Disjunction} \\
+                & | && ... \\
+                & | && A\phi \tag*{All paths} \\
+                & | && E\phi \tag*{Some paths}
+        \end{alignat*}
+        \end{minipage}
+        \hspace{30mm}
+        \begin{minipage}[t]{0.5\textwidth}
+        \setlength{\parskip}{8pt}
+        Defined mutually recursively between state and path formulae. Ensures that the connectives line up in the right orders.
+
+        State formulae \(\psi\) are true for a state \(s\) like CTL, path formulae are true of a path \(\pi\) like LTL.
+
+        \textbf{For CTL*, \((S,S_0,R,L) \vDash \psi\) is defined as \(\forall s \in S_0.\;\interp{\psi}_M(s)\) (the same as in CTL)}.
+
+        All LTL formulae can be proved by quantifying them with \(A\) (to match up the definition of \(\vDash\)): \(M\vDash_\text{LTL}\phi \Longleftrightarrow M\vDash_\text{CTL*}A\phi\).
+        \end{minipage}
+    }
+}
+\section*{Simulation and Abstraction}
+{
+    \subsection*{Simulation}
+    {
+        Let \(M_1\) and \(M_2\) be two models, with transition relations \(R_1\) and \(R_2\).
+
+        \(H : S_1 \rightarrow S_2 \rightarrow \mathbb{B}\) is a \textbf{simulation relation between \(R_1\) and \(R_2\)} if for every step of \(R_1\) there is a corresponding step of \(R_2\):
+
+        \[\forall s_1,s_1' \in S_1, s_2 \in S_2.\; H\;s_1\;s_2 \wedge R_1\;s_1\;s_1' \implies \exists s_2' \in S_2.\;R_2\;s_2\;s_2' \wedge H\;s_1'\;s_2'\]
+
+        If there's a simulation relation between \(M_1\) and \(M_2\), then \textbf{\(M_2\) simulates \(M_1\)}. A state \(s_2\) in \(M_2\) simulates a state \(s_1\) in \(M_1\) iff \(H\;s_1\;s_2\).
+
+        Also interested in a simulation relation \(H_{AP}\) between the abstract properties of the two machines, but not detailed.
+    }
+    \subsection*{Bisimulation}
+    {
+        \(H : S_1 \rightarrow S_2 \rightarrow \mathbb{B}\) is a \textbf{bisimulation relation between \(R_1\) and \(R_2\)} if for every step of \(R_1\) there is a corresponding step of \(R_2\), and vice-versa (if \(M_1\) simulates \(M_2\) and \(M_2\) simulates \(M_1\)):
+
+        \begin{itemize}
+        \item \(\forall s_1,s_1' \in S_1, s_2 \in S_2.\; H\;s_1\;s_2 \wedge R_1\;s_1\;s_1' \implies \exists s_2' \in S_2.\;R_2\;s_2\;s_2' \wedge H\;s_1'\;s_2'\)
+        \item \(\forall s_1 \in S_1, s_2,s_2' \in S_2.\; H\;s_1\;s_2 \wedge R_2\;s_2\;s_2' \implies \exists s_1' \in S_1.\;R_1\;s_1\;s_1' \wedge H\;s_1'\;s_2'\)
+        \end{itemize}
+
+        If \(M_1\) and \(M_2\) have a bisimulation relation then for any CTL* formula \(\psi\), \(M_1\vDash\psi \Longleftrightarrow M_2\vDash\psi\).
+    }
+    \subsection*{Abstraction}
+    {
+        An abstraction simplifies a model: several concrete states and properties may be merged, and an abstract path may represent several concrete paths.
+
+        \(M \preceq \overline{M}\) means \(\overline{M}\) is an abstraction of \(M\):
+        \begin{itemize}
+        \item \(\overline{M}\) simulates \(M\) with relation \(H\) and abstract property relation \(H_{AP}\).
+        \item \(\forall s_0\in S_0.\;\exists \overline{s_0} \in \overline{S_0}.\;H\;s_0\;\overline{s_0}\) (all start states in \(M\) have an equivalent start state in \(\overline{M}\)).
+        \item \(\forall s \in S, \overline{s} \in \overline{S}.\;H\;s\;\overline{s} \implies H_{AP}\;L(s)\;\overline{L}(\overline{s})\) (if a state simulates another, then the abstract properties are also abstracted).
+        \end{itemize}
+    }
+    \subsection*{ACTL}
+    {
+        Define a subset ACTL of CTL without \(E\)-properties and with negation only of atomic properties \(p\), \(p_1 \wedge p_2\), ....
+
+        If \(M \preceq \overline{M}\) then for any ACTL state formula \(\psi\), \(\overline{M} \vDash \psi \implies M \vDash \psi\). Strictly an implication, the converse doesn't hold. Formalisation of an abstract interpretation from Optimising Compilers.
     }
 }
 \end{document}
