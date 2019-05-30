@@ -525,7 +525,10 @@
     {
         \(M = (S,S_0,R,L) \vDash \phi\) means that \(\phi\) holds on all \(R\)-paths starting from a member of \(S_0\):
         \[\forall \pi,s.\; (s \in S_0 \wedge \text{Path}\;R\;s\;\pi) \implies \interp{\phi}_M(\pi)\]
-        Where \(\interp{\phi}_M(\pi)\) is defined as:
+
+        \(F\) and \(G\) talk about \textbf{tails of the path}, not new paths: we're given a fixed path at the start and just see different suffixes of it.
+
+        \(\interp{\phi}_M(\pi)\) is defined as:
 
         \vspace{-8mm}
         \begin{minipage}[t]{0.3\textwidth}
@@ -637,7 +640,8 @@
         \item \(F(p) = \{s \mid p \in L(s)\}\)
         \item \(F(AX \psi) = \{s \mid \forall s'.\; R\;s\;s' \wedge s' \in F(\psi)\}\): the states where all successors satisfy the subformula.
         \item \(F(EX \psi) = \{s \mid \exists s'.\; R\;s\;s' \wedge s' \in F(\psi)\}\): the states where at least one successor satisfies the subformula.
-        \item \(F([\psi_1\;U\;\psi_2])\): mark all states in \(F(\psi_2)\), then mark all states in \(F(\psi_1)\) with a successor that's marked, and repeat until we reach a fixed point.
+        \item \(F(E[\psi_1\;U\;\psi_2])\): mark all states in \(F(\psi_2)\), then mark all states in \(F(\psi_1)\) with at least one successor that's marked, and repeat until we reach a fixed point.
+        \item \(F(A[\psi_1\;U\;\psi_2])\): same as above but require all successors to be marked.
         \item ...
         \end{itemize}
     }
@@ -727,8 +731,18 @@
         \item \(\forall s_1,s_1' \in S_1, s_2 \in S_2.\; H\;s_1\;s_2 \wedge R_1\;s_1\;s_1' \implies \exists s_2' \in S_2.\;R_2\;s_2\;s_2' \wedge H\;s_1'\;s_2'\)
         \item \(\forall s_1 \in S_1, s_2,s_2' \in S_2.\; H\;s_1\;s_2 \wedge R_2\;s_2\;s_2' \implies \exists s_1' \in S_1.\;R_1\;s_1\;s_1' \wedge H\;s_1'\;s_2'\)
         \end{itemize}
+    }
+    \subsection*{Bisimulation Equivalence}
+    {
+        \(M \equiv M'\) iff:
+        \begin{itemize}
+        \item there's a bisimulation relation \(B\) between \(R\) and \(R'\).
+        \item \(\forall s_0 \in S_0.\;\exists s_0' \in S_0'.\;B s_0 s_0'\).
+        \item \(\forall s_0' \in S_0'.\;\exists s_0 \in S_0.\;B s_0 s_0'\).
+        \item \(\forall s \in S_0, s' \in S_0'.\; B\;s\;s' \implies L(s) = L'(s')\).
+        \end{itemize}
 
-        If \(M_1\) and \(M_2\) have a bisimulation relation then for any CTL* formula \(\psi\), \(M_1\vDash\psi \Longleftrightarrow M_2\vDash\psi\).
+        If \(M_1 \equiv M_2\) then for any CTL* formula \(\psi\), \(M_1\vDash\psi \Longleftrightarrow M_2\vDash\psi\).
     }
     \subsection*{Abstraction}
     {
@@ -740,6 +754,8 @@
         \item \(\forall s_0\in S_0.\;\exists \overline{s_0} \in \overline{S_0}.\;H\;s_0\;\overline{s_0}\) (all start states in \(M\) have an equivalent start state in \(\overline{M}\)).
         \item \(\forall s \in S, \overline{s} \in \overline{S}.\;H\;s\;\overline{s} \implies H_{AP}\;L(s)\;\overline{L}(\overline{s})\) (if a state simulates another, then the abstract properties are also abstracted).
         \end{itemize}
+
+        Intuitively, read \(M_1 \preceq M_2\) as `the states of \(M_1\) are a subset of the states of \(M_2\)' (plus the other conditions): \(M_2\) clusters some states together.
     }
     \subsection*{ACTL}
     {
