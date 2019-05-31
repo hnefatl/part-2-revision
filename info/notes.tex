@@ -598,6 +598,53 @@
 }
 \section*{Data Compression}
 {
+    Where there's redundant information, there's potential for compressibility.
+    
+    \begin{itemize}
+    \item \textbf{RLE} removes adjacent redundancy.
+    \item \textbf{Predictive coding} records deviations from a prediction rather than the larger sample values.
+    \item \textbf{Dictionary compression} exploit that strings of symbols have much more varied probabilities than individual symbols, and exploit sparseness of data.
+    \end{itemize}
 
+    \textbf{LZW} and \textbf{GIF} compression works by building a \textbf{dictionary} of data: words or pixel values in one pass, then replacing each instance of the word/pixel by a reference into the dictionary. Might use variable-length indices to reduce the space needed to store a pointer to a common item.
+
+    \textbf{Vector quantisation} is a lossy compression method that takes advantage of sparseness of language. With a coding budget of 15 bits, we can only represent strings of a few letters, and most of them are nonsense. If instead we build a \textbf{dictionary} or \textbf{codebook} of words that are used and use pointers into the table, then we represent \(2^{15}\) useful words.
+
+    Can encode approximate values, eg.\ similar clusters of pixels can be mapped to the same code if the difference isn't noticeable.
+}
+\section*{FFT and DFT}
+{
+    Consider discrete functions instead of real/complex functions. 
+
+    Skipping?
+}
+\section*{Wavelets}
+{
+    Wavelets are an alternative way of representing signals, combining Fourier (frequency-based) with size-specific local undulations.
+
+    \textbf{Dyadic wavelets} are one form of wavelets, where a generating wavelet \(\Psi(x)\) spawns an orthonormal basis \(\Psi_{jk}(x)\) to represent a function \(f(x)\):
+    \[f(x) = \sum_{j=-\infty}^\infty \sum_{k=-\infty}^\infty c_{jk}\Psi_{jk}(x)\]
+
+    The \textbf{daughter wavelets} \(\Psi_{jk}(x)\) are all transformations and scales/stretches parameterised by \(j\) and \(k\) of the mother wavelet \(\Psi(x)\).
+
+    The wavelets are local only to a specific area of the function, defined by the \(j,k\) parameters. This means that the coefficients \(c_{jk}\) carry specifically local information about the function.
+}
+\section*{Kolmogorov Complexity}
+{
+    \textbf{Algorithmic complexity} of data is the length of a program which can generate the data. Not to be confused with \textbf{computational complexity}, the cost of executing such a program.
+
+    \textbf{Kolmogorov Complexity} measures the complexity of a string of data as the length of the shortest executable program which can compute the string, the \textbf{`minimal description length'}.
+
+    When a data string is drawn from a distribution, \textbf{the Kolmogorov complexity is approximately equal to the entropy of the distribution}: \(H \approx K\).
+
+    The Kolmogorov complexity of a string of bits of length \(n\) is usually around \(n\). However, some strings have significantly lower complexity, such as the binary encoding of \(\pi\): the Kolmogorov complexity for that string is constant and low, rather than infinite.
+
+    An infinite string is \textbf{K-incompressible} if the Kolmogorov complexity \(K\) tends to the length of the string in the limit:
+    \[\lim_{n\rightarrow\infty}{K(x_1x_2...x_n \mid n)} = n\]
+}
+\section*{Extracting Noise}
+{
+    Signals have precise frequencies and are periodic, whereas noise is usually random: we can extract periodic components from noise by making the noise average out against itself using an auto-correlation integral:
+    \[g(t) = \int_{-\infty}^\infty{f(x)f(x + t)\;dx}\]
 }
 \end{document}
