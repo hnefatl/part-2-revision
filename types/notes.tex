@@ -267,11 +267,10 @@
 }
 \section{Existentials}
 {
-
     \begin{alignat*}{4}
     &\text{Types } &&A &&::= ... \mid \exists\alpha.\;A && \\
-    &\text{Terms } &&e &&::= ... \mid \text{pack}_{\alpha.B}(A,e) \mid \text{let pack}(\alpha,x) = e\text{ in }e' && \\
-    &\text{Values } &&v &&::= \text{pack}_{\alpha.B}(A,v) &&
+    &\text{Terms } &&e &&::= ... \mid \text{pack}_{\alpha.A}(C,e) \mid \text{let pack}(\alpha,x) = e\text{ in }e' && \\
+    &\text{Values } &&v &&::= \text{pack}_{\alpha.A}(C,v) &&
     \end{alignat*}
 
     \begin{gather*}
@@ -283,8 +282,8 @@
     \\
     \\
     \prftree[r]{(\(\exists_\text{I}\))}
-    {\Theta;\Gamma\vdash e:\exists\alpha.\;C}
-    {\Theta,\alpha;\Gamma,x:C \vdash e' : D}
+    {\Theta;\Gamma\vdash e:\exists\alpha.\;A}
+    {\Theta,\alpha;\Gamma,x:A \vdash e' : D}
     {\Theta\vdash D\text{ type}}
     {\Theta;\Gamma\vdash \text{let pack}(\alpha,x) = e\text{ in }e':D}
     \\

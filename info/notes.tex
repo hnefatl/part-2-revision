@@ -376,7 +376,9 @@
 {
     Information-theoretic signals and channels are ultimately physical systems.
 
-    Channels are assigned a \textbf{spectral band} of a medium, within which a \textbf{carrier signal} is modulated (by frequency, amplitude, or phase) to encode information. The resulting function has a \textbf{bandwidth} \(W\) Hz relating to the channel capacity \(C\).
+    Channels are assigned a \textbf{spectral band} of a medium, within which a \textbf{carrier signal} is modulated (by frequency, amplitude, or phase) to encode information. The resulting function has a \textbf{bandwidth} \(W\) Hz relating to the channel capacity \(C\). Bandwidth is the \textbf{range of frequencies} a signal can use.
+
+    The original input signal is the \textbf{baseband}. The \textbf{carrier signal} is a sine wave of some frequency used as the default empty communication along the medium. The \textbf{passband} is the carrier modulated with the baseband, and is the signal that's actually transmitted. Selecting the carrier signal is `tuning' into a channel.
 
     \begin{minipage}[t]{0.6\textwidth}
     \setlength{\parskip}{8pt}
@@ -471,7 +473,12 @@
     Use \(F(\omega)\) or \(\mathcal{F}_f(\omega)\) to refer to the representation of \(f\) in the frequency/Fourier domain, defined by:
     \[F(\omega) = \mathcal{F}_f(\omega) = \frac{1}{2\pi}\int_{-\infty}^\infty{f(x)e^{-i\omega x}\;dx}\]
 
+    The \textbf{inverse Fourier transform} uses \(e^{i\omega x}\) instead of \(e^{-i\omega x}\):
+    \[f(x) = \int_{-\infty}^\infty{F(\omega)e^{i\omega x}\;d\omega}\]
+
+    Compared to the Fourier series:
     \begin{itemize}
+    \item We have an integration instead of a summation.
     \item Bounds now range over \([-\infty,\infty]\) rather than between the lower and upper bounds of the periodicity.
     \item The frequency parameter \(\omega\) in the exponential now ranges over \(\mathbb{R}\) instead of \(\mathbb{Z}\).
     \end{itemize}
@@ -481,6 +488,116 @@
     \item[Global-to-Local Property:] the value of \(F(\omega)\) at \textit{any} point \(\omega\) is affected by the behaviour of \(f(x)\) at \textit{all} points \(x\).
     \end{description}
 
-    The x-axis is time in the time domain, frequency in the frequency domain: frequency is just 1/time.
+    If \(f^{(n)}(x)\) is the \(n\)\textsuperscript{th} derivative of \(f(x)\):
+    \[\mathcal{F}_{f^{(n)}}(\omega) = (i\omega)^n \mathcal{F}_f(\omega)\]
+
+    Taking the derivative of a function acts as a filtering operation in the Fourier domain: the multiplication by \((i\omega)^n\) reduces the effect of low frequencies and increases the effect of high frequencies, performing a high-pass filter.
+
+    \textbf{Self-fourier} means that the function form stays the same: a Gaussian \(\mu, \sigma\) is self-fourier, the transformation produces \textbf{another Gaussian} \(\frac{1}{\mu},\frac{1}{\sigma}\).
+
+    Fourier transforms can turn calculus problems into algebra problems:
+    \[af''(x) + bf'(x) + cf(x) = g(x)\]
+    \[\Big(a(i\omega)^2 + bi\omega + c\Big)F(\omega) = G(\omega) \hspace{1cm} F(\omega) = \frac{G(\omega)}{a(i\omega)^2 + bi\omega + c}\]
+    \[f(x) = \int_{-\infty}^\infty{F(\omega) e^{i\omega x}\;d\omega}\]
+
+    \subsection*{Convolution}
+    {
+        For \(f,g : \mathbb{R} \rightarrow \mathbb{C}\), the \textbf{convolution} is defined by the following. \(x\) is the relative shift.
+        \[(f * g)(x) = \int_{-\infty}^\infty{f(x-y)g(y)\;dy}\]
+
+        Convolution is commutative (\(f*g = g*f\)).
+
+        All filtering operations are convolutions of some form, hence the importance of the operation.
+
+        The \textbf{convolution theorem} shows that while \textbf{convolution is expensive in the time domain} (integration), it's \textbf{only a multiplication between functions in the Fourier domain}. It's usually mor efficient to transform functions into the Fourier domain, perform the multiplication, then convert back into the time domain.
+        \[\mathcal{F}_{f*g}(\omega) = 2\pi \mathcal{F}_f(\omega) \mathcal{F}_g(\omega)\]
+
+        \begin{itemize}
+        \item \textbf{Convolution in the time domain is multiplication in the Fourier domain}.
+        \item \textbf{Multiplication in the time domain is convolution in the Fourier domain}.
+        \end{itemize}
+    }
+    \subsection*{Modulation}
+    {
+        Encoding a message (baseband) into a carrier signal to form the passband involves manipulations in the Fourier domain.
+
+        If we want to transmit \(f(t)\), we can encode it into \(F(\omega)\) and send it directly, but that consumes the entire medium. If we modulate (multiply) \(f\) by a complex exponential \textbf{carrier signal} of frequency \(c\), \(e^{ict}\), then we \textbf{shift the Fourier spectrum up by the carrier frequency \(c\)}.
+        \begin{align*}
+        \mathcal{F}_{f(t)e^{ict}}(\omega) &= \frac{1}{2\pi}\int_{-\infty}^\infty{e^{ict}f(t)e^{-i\omega t}\;dt} \\
+                                          &= \frac{1}{2\pi}\int_{-\infty}^\infty{f(t)e^{-i(\omega-c)t}\;dt} \\
+                                          &= \mathcal{F}_f(\omega - c)
+        \end{align*}
+
+        To demodulate after receiving the signal, we just convert back to the time domain and multiply by \(e^{-ict}\).
+
+        \textbf{Frequency modulation} alters the frequency of the wave -- rather than the height of the waves, the spacing between crests and troughs.
+    }
+
+    The \(x\)-axis is time in the time domain, frequency in the frequency domain: frequency is just 1/time.
+}
+\section*{Degrees of freedom in a continuous signal}
+{
+    Bandlimiting a function (restricting the frequency to a specific range) reduces the degrees of freedom to a finite number, allowing for quantisation.
+
+    \subsection*{Nyquist's Sampling Theorem}
+    {
+        We can reconstruct a function completely as long as we sample it at least \(2W\) (twice the greatest frequency occurring in the signal). This means we sample every \(\frac{1}{2W}\) seconds.
+
+        Define a sampling function \(\textbf{comb}(t) = \bm{\delta}_S(t) = \sum_n{\delta(t-nS)}\) as an endless sequence of tines, separated by a sampling interval \(S\). A \textbf{tine} is a Gaussian whose variance tends to 0 (the integral has area 1).
+
+        The Fourier transform of a comb function is another comb function, but with the tines spread out as \(\frac{1}{S}\) as opposed to \(S\) in the time-domain version.
+
+        Multiplying the time-domain function with the comb function effectively samples it at the tine locations. 
+
+        \textbf{Convolving a function with a tine reproduces the original function centered on the tine}:
+        \[\int_{-\infty}^\infty{f(t)\delta(c-t)\;dt} = f(t-c)\]
+        Convolving a comb with a function produces \textbf{multiple copies of the function, each centred on a tine}.
+
+        \begin{minipage}[t]{0.6\textwidth}
+        \setlength{\parskip}{8pt}
+        This means that the Fourier transform of the product of the comb function with the time-domain function produces a convolution of the frequency-domain function with the comb: as the comb is a summation of individual tines, this reproduces the Fourier transform of the function at each tine.
+
+        Unless we sample at \(\geq 2W\), the tines in the frequency domain will be \(< 2W\) apart, which means the functions can overlap (assuming the input functions are strictly bandlimited to \(W\)). The \(2W\) defines the spacing between functions in the Fourier domain, and if they overlap then we corrupt the function being transmitted.
+        \end{minipage}
+        \hspace{3mm}
+        \begin{minipage}[t]{0.35\textwidth}
+        \vspace{0pt}
+        \centering
+        \includegraphics[width=\textwidth]{nyquist.png}
+        \end{minipage}
+        
+        We can recover the original function by just low-pass filtering the fourier domain by \(W\), then performing an inverse Fourier transform.
+    }
+    \subsection*{Logan's Theorem}
+    {
+        For a \textbf{bandpass limited} signal where the lowest frequency is at least half the highest frequency \(W_H \leq 2W_L\), just storing the \textbf{zero-crossings} of the signal allows \textbf{reconstructing the signal with an unknown scale}.
+    }
+    \subsection*{Gabor's Information Diagram}
+    {
+        \begin{minipage}[t]{0.6\textwidth}
+        \setlength{\parskip}{8pt}
+        The shorter the duration of a signal, the greater its bandwidth must be: the narrower the bandwidth, the longer the signal must persist.
+
+        \textbf{No signal can occupy an `area' smaller than \(\displaystyle \frac{1}{4\pi}\)}. The blobs are called \textbf{time-frequency atoms}.
+
+        The unique signals with minimal areas \(\frac{1}{4\pi}\) are named \textbf{logons}, or \textbf{Gabor Wavelets}, and are \textbf{complex exponentials scaled by Gaussians}:
+        \[f(x) = e^{-(\frac{x-x_0}{\alpha})^2}\;e^{i\omega_0(x-x_0)}\]
+
+        Wavelets are helical functions of \(x\), centered on \(x_0\), frequency modulated by \(\omega_0\), and spreading constant \(\alpha\).
+
+        Gabor wavelets have the greatest possible resolution so would be good as a basis for representing signals in, but are \textbf{non-orthogonal}, so the coefficients are hard to compute.
+        \end{minipage}
+        \hspace{3mm}
+        \begin{minipage}[t]{0.35\textwidth}
+        \vspace{0pt}
+        \centering
+        \includegraphics[width=\textwidth]{gabor-quantal.png}\\
+        \includegraphics[width=0.5\textwidth]{gabor-wavelets.png}
+        \end{minipage}
+    }
+}
+\section*{Data Compression}
+{
+
 }
 \end{document}

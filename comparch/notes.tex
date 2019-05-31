@@ -1,4 +1,4 @@
-\documentclass[a4paper,11pt]{article}
+\documentclass[a4paper, 11pt]{article}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -35,7 +35,7 @@
 
 \section*{Design Metrics}
 { 
-    \begin{minipage}[t]{0.3\textwidth}
+    \begin{minipage}[t]{0.25\textwidth}
     \begin{itemize}
     \item Energy
     \item Power
@@ -46,14 +46,15 @@
     \item Reliability
     \end{itemize}
     \end{minipage}
-    \begin{minipage}[t]{0.65\textwidth}
+    \begin{minipage}[t]{0.7\textwidth}
+    \setlength{\parskip}{8pt}
     \begin{itemize}
     \item Focus on common case: overall speed increases even if specific speed decreases.
     \item Amdahl's Law: \(\text{speedup} = \frac{1}{\text{sequential} + \frac{1 - \text{sequential}}{\text{speedup}_\text{enhanced}}}\)
     \item Adding enhancements means lower transistor budget, more localised heat, slower clock freq, .... Might affect common case.
     \item
     {
-        \[\frac{1}{\text{performance}} = \frac{\text{time}}{\text{program}} = \frac{\text{instructions}}{\text{program}} \times \frac{\text{cycles}}{\text{instruction}} \times \frac{\text{time}}{\text{cycle}}\]
+        \(\displaystyle \frac{1}{\text{performance}} = \frac{\text{time}}{\text{program}} = \frac{\text{instructions}}{\text{program}} \times \frac{\text{cycles}}{\text{instruction}} \times \frac{\text{time}}{\text{cycle}}\)
 
         \begin{itemize}
         \item Instruction count is affected by the ISA and compiler tech.
@@ -178,11 +179,13 @@
         }
         \subsubsection*{Two-level Predictor}
         {
-            Local-history two-level predictors use a table of shift registers (history registers, like 01101) storing the branch's latest taken/not-takens. Also keep a table per branch, indexed by that branch's history register with entries being 2-bit counters like above.
+            Local-history two-level predictors use a table of shift registers (history registers, like 01101) storing the branch's latest taken/not-takens. Also keep a table \textbf{per branch}, indexed by that branch's history register with entries being 2-bit counters like above.
 
             First level is the shift register holding a branch's history. Second level is using that history register to look up the prediction.
 
             Global history predictor uses a single shift register to hold the global history of branches, rather than a specific hash of them. Second level is the same, just the first level is less interesting.
+
+            The use of shift registers with the counters aims to \textbf{capture patterns}.
 
             \textit{Check in supo notes that Daniel agreed with the global predictor definition.}
         }
@@ -345,6 +348,8 @@
 {
     \textbf{Very Large Instruction Width} processors move the scheduling complexity out of the processor and into the compiler.
 
+    \textbf{Important idea is that all performance techniques used on VLIW have to be implemented in the commpiler} -- the below techniques are \textbf{compiler techniques}, not hardware ones.
+
     Idea is to use an ISA which supports packing a number of independent instructions into a single long instruction. Each slot in the instruction has a fixed function (integer op, load/store, floating-point, ...).
 
     Latency subtleties come into play: operations have different durations, so the compiler is forced to assume worst-case delay for each (assume eg. 3 instruction delay before memory ops are completed). If an operation takes longer (cache miss), the pipeline is just stalled.
@@ -366,6 +371,8 @@
         }
         \subsubsection*{Software Pipelining}
         {
+            Remember this is specifically a \textbf{compiler} technique for \textbf{VLIW}.
+
             Overlap different iterations of the loop so that we avoid the setup/teardown associated with loop unrolling. Each VLIW instruction has a slot filled by each iteration.
 
             Register renaming can get difficult if we need a result computed by an old iteration, as the register will get overwritten.
@@ -401,6 +408,14 @@
     \subsection*{Conditional Instructions}
     {
         Conditional instructions are effective for VLIW as they can fill slots in instructions that would otherwise be blank, even if they don't end up being executed.
+    }
+    \subsection*{Memory Reference Speculation}
+    {
+        Notable because it's the compiler speculating about \textbf{runtime behaviour}. Requires hardware support.
+
+        Can move instructions up the basic block graph, with the assumption that later blocks will be run: then use a special instruction to indicate that if the blocks aren't run, the processor should restart to preserve semantics and exception behaviour.
+
+        Eg\. we can move loads before stores if the compiler guesses they won't use the same address, but then the compiler inserts an instruction later that tells the processor to check the addresses were different, and if not, restart.
     }
 }
 \section*{Multithreaded Processors: \textbf{Concurrency}}
@@ -560,7 +575,10 @@
     \subsection*{Optimisations}
     {
         \begin{minipage}[t]{0.6\textwidth}
-        \textbf{Chaining}: don't need to wait for a multiply to finish operating on a vector before we start adding with it, we only need to wait for the first element to be finished.
+        %\textbf{Chaining}: don't need to wait for a multiply to finish operating on a vector before we start adding with it, we only need to wait for the first element to be finished. Reduces the cost of RAW dependencies.
+        \textbf{Chaining}: Reduce the cost of \textbf{read-after-write} dependencies between operations by starting the second instruction when the first operation has finished with the first element.
+
+        \textbf{Tailgating}: Chaining but applied to \textbf{write-after-read} hazards: allow overwriting the elements of one vector as soon as they've been read.
 
         \textbf{Vector conditional execution}: want to handle per-element conditionals. Use a vector mask (vector containing booleans) to control execution of an operation.
 
@@ -571,6 +589,13 @@
         \vspace{0pt}
         \centering
         \includegraphics[width=\textwidth]{vector-chaining.png}
+        \begin{monospacefigure}
+        MULV v3, v1, v1
+        // Chain v3 (RaW)
+        ADDV v4, v3, v1
+        // Tailgate v3 (WaR)
+        MULV v3, v2, v2
+        \end{monospacefigure}
         \end{minipage}
     }
     \subsection*{SIMD ISA Extensions}
