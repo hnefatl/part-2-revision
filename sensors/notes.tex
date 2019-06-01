@@ -44,6 +44,8 @@
 \item Proactive routing protocols maintain routes to nodes even when not being used -- usually expensive, but lower latency.
 \item Reactive routing protocols find routes only when communication is needed -- comparatively high latency but cheaper for infrequent communication.
 \item Reliable but long routes are better than short unreliable routes, for energy inefficiency. Using error correcting codes may add data and computation but reduce retransmissions.
+\item Can't hurt to name-drop examples: when talking about inference, say `similar to in the ACE system'.
+\item \textbf{On-device computation} is good for \textbf{privacy} -- don't send data to the cloud, keep it secure locally. Think of privacy issues.
 \end{itemize}
 
 \section*{Background}
@@ -442,5 +444,96 @@
     \textbf{Context and Environment}: microphone, camera. Infers the social activity, used for health and wellness or eg.\ automated diary.
 
     Broad issues: heterogeneity of sensors reduce generalisation of techniques due to sensitivity/power/frequency differences. Privacy issues are big, measurements are noisy, and there's limited processing/battery power.
+}
+\section*{Energy Efficiency in Inference}
+{
+    Continuous monitoring is constantly polling sensors -- very expensive in general, but `required' to trigger actions.
+
+    Use duty cycling on sensors, to only enable them for windows of time. Downside is that the view of user activity is incomplete in the downtime.
+
+    \subsection*{Shared Context Sensing}
+    {
+        Use a shared cache of sensor output, maybe also cache inferences made such as \texttt{Driving?}. When an app requests a value, we poll the sensor/infer the value then cache it. A different app requesting the same data later gets a cached value rather than recomputing.
+    }
+    \subsection*{ACE}
+    {
+        Can infer some features from other features -- if an app requests the value of \texttt{AtHome} we can infer the value from the negatively-correlated \texttt{Driving} feature, which we've had cached. Means we avoid polling GPS and WiFi localisation data.
+
+        Builds on the shared cache, as we want to reuse data between apps.
+
+        Usually want the cheapest method of inferring a feature, so use eg.\ \texttt{Running} to infer the value of \texttt{AtOffice} instead of using \texttt{AtHome}, as \texttt{AtHome} may be expensive compared to the accelerometer check.
+
+        \textbf{Rule Miner}: automatically learns relationships between various features by looking for positive or neagative correlation.
+
+        \textbf{Sensing Planner}: finds a cheap sequence of proxy sensors to sample in order to determine a target feature. Heuristics manually added to make the problem tractable.
+
+        \textbf{Inference Cache}: return a cached value if it exists, or infer the value using the sensing planner if possible. If not, directly poll the sensor and cache.
+    }
+    \subsection*{MAUI}
+    {
+        Offloading data to the cloud can be wasteful, given the high cost of transmitting and the power of current mobile devices. Eg.\ using an on-chip GPU for updating a model can be massively faster and less expensive than uploading all the data to the cloud for processing then downloading the updated model. This is especially true on unreliable networks.
+
+        MAUI profiles code components to determine whether they should be run locally or remotely, taking into account:
+        \begin{itemize}
+        \item Cost of transferring code/data.
+        \item Latency.
+        \item Network constraints.
+        \end{itemize}
+
+        However, it only considers the CPU -- there are dedicate GPUs, DSP units, even some machine learning FUs on movile devices.
+    }
+    \subsection*{LEO}
+    {
+        Improvement to MAUI which has profiles for different on-chip resources, and can dispatch execution to any of them or the cloud.
+
+        Very good for continuous audio sensing, as we can use on-chip DSP processors instead of transmitting the audio stream.
+    }
+}
+\section*{Privacy}
+{
+    Lots of user generated data, permission control is still quite coarse -- apps can generate data for advertising use, but there's no system-level verifiable control of where the data can go, it's all in the contract/terms-of-usage.
+
+    \subsection*{TaintDroid}
+    {
+        Android variant that allows for tracking sensitive data movement in and between apps at runtime. Labels data from privacy-sensitive sources (most sensors, some system information/preferences) and propagates labels as the data propagates through variables, files, and IPC.
+
+        When tainted data leaves the system (transmitted, saved to an external device, ...), TaintDroid logs the data labels, the application responsible for the transmission, and the data destination.
+
+        Runtime, so relatively easy to `just run', but imposes a runtime performance hit.
+    }
+    \subsection*{Static Analysis}
+    {
+        Statically verify all the paths from sources to sinks within an app/system.
+
+        Much much much more effort than dynamic analysis, but no runtime efficiency overhead.
+    }
+    \subsection*{Cell Network Leaks}
+    {
+        Mobile devices roam around and register with base-stations -- data leaks from the station records can uniquely identify users.
+
+        Some cell protocols can be directly vulnerable to locational attacks due to broadcasting.
+    }
+    \subsection*{WiFi Leaks}
+    {
+        WiFi device id or MAC addresses are broadcast -- extra vulnerable on open WLANs. Information freely broadcast is enough to track locations of devices across networks.
+
+        Specific personally-identifying information can be gained from applications, websites, ad content, traffic data in WiFi hotspots -- open WiFi is death.
+    }
+    \subsection*{Mobile Sensor Leaks}
+    {
+        Accelerometers are different on all devices -- can be used as a per-device signature or fingerprint, or used to identify different users of the same device. Touch sensor usage, keyboard patterns, .... 
+        
+        Even in anonymised datasets, identifying a specific user is relatively easy given activity profiles. Correlation of activities introduces information.
+    }
+    \subsection*{Mobility Prediction}
+    {
+        Given past mobility information, can infer future mobility. Even more effective when combined with friends/family/coworker information.
+
+        Colocating in both time and space is hard, but shown to be possible and demonstrated.
+    }
+}
+\section*{Localisation}
+{
+    
 }
 \end{document}
