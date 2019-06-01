@@ -40,6 +40,12 @@
 \begin{document}
 \maketitle
 
+\begin{itemize}
+\item Proactive routing protocols maintain routes to nodes even when not being used -- usually expensive, but lower latency.
+\item Reactive routing protocols find routes only when communication is needed -- comparatively high latency but cheaper for infrequent communication.
+\item Reliable but long routes are better than short unreliable routes, for energy inefficiency. Using error correcting codes may add data and computation but reduce retransmissions.
+\end{itemize}
+
 \section*{Background}
 {
     12 billion mobile devices -- almost everyone has phones, now sensors and IOT etc.\ is gaining traction.
@@ -64,10 +70,10 @@
 
     Types of connectivity, with energy/reliability/rate limits:
     \begin{itemize}
-    \item Cellular (SMS, 3G, 4G, ...)
-    \item WiFi
-    \item Bluetooth
-    \item NFC
+    \item Cellular (SMS, 3G, 4G, ...) -- large range.
+    \item WiFi -- high energy cost on the receiver, but can have very high rates and quite high range.
+    \item Bluetooth -- low cost (depends on protocol), low range.
+    \item NFC -- very low range.
     \item Generic other radio communication
     \end{itemize}
 
@@ -87,11 +93,354 @@
     \begin{itemize}
     \item
     {
-        CSMA/CD: transmit if nothing else is, jam if you detect a collision, random binary exponential backoff.
+        CSMA/CD: transmit if nothing else is, jam if you detect a collision, randomised binary exponential backoff.
+
+        \begin{minipage}[t]{0.65\textwidth}
+        \setlength{\parskip}{8pt}
         \begin{itemize}
-        \item Hidden Terminal:
+        \item Hidden Terminal: if \(A\) transmits to \(B\), any data \(C\) sends will cause a collision, but \(C\) can't tell that \(A\) is sending.
+        \item Exposed Terminal: if \(B\) transmits to \(A\), \(C\) can't transmit in case it causes a collision at \(A\), but \(A\) is out of range of \(C\).
         \end{itemize}
+        \end{minipage}
+        \hspace{3mm}
+        \begin{minipage}[t]{0.25\textwidth}
+        \vspace{2mm}
+        \centering
+        \includegraphics[width=\textwidth]{terminals.png}
+        \end{minipage}
+    }
+    \item
+    {
+        Multiple Access with Collision Avoidance for Wireless (\textbf{MACAW}): Sender sends an RTS, receiver signals CTS if available. Potential interferers see the transmissions and know whether to wait or request from the combinations of packets (eg.\ see a RTS but no CTS within a timeout, the requester is probably hidden).
     }
     \end{itemize}
+
+    Some powered devices have a maximum current draw -- need to control which subdevices are active at each time to prevent overloading (eg.\ can't run radio and process data at the same time).
+}
+\section*{Ad-Hoc Networks}
+{
+    Defining feature is that there's no existing infrastructure: the network configures itself dynamically. Uses in:
+    \begin{itemize}
+    \item Rescue operations.
+    \item Military operations.
+    \item Autonomous vehicles.
+    \end{itemize}
+
+    These routing protocols assume that there's a \textbf{complete route between source and destination at the same time}.
+
+    \subsection*{Destination Sequenced Distance-Vector Routing}
+    {
+        Distance-vector style protocol. Each node maintains a table indexed by destination node containing: \textbf{next hop}, \textbf{hops required}, and \textbf{sequence number}. Each node also carries a randomly-initialised counter used for generating the sequence numbers for transmissions from it. Sequence numbers represent recentness of data.
+
+        Every node periodically transmits its full routing table to ensure convergence throughout the network, but also sends smaller incremental updates frequently.
+
+        When a node becomes aware of multiple routes to the same node, it picks the route with the \textbf{greatest sequence number}, which \textbf{avoids loops} and ensures we use the most recent route.
+
+        \begin{itemize}
+        \item When a node joins the network, it transmits its \textbf{sequence number incremented by 2}, and the \textbf{full routing table} (either a single entry to itself if it's a sole node, or a full table if it's part of a disjoint subnet). Nodes within range update their table with the new node's table, then propagate the relevant changes to neighbours (incremental update).
+        \item When a node leaves the network, each node notices the break (eg.\ no table update within a timeout), so updates the hop count to that node to \(\infty\) and \textbf{increments the sequence number}, then propagates the changes to neighbours.
+        \end{itemize}
+
+        Incrementing the sequence number on a disconnect is to force the other tables to use the new routing information, as the sequence number is higher than the old one. When we see an update from the destination node, it'll have sequence number of 2 more than the original, which makes it more recent.
+
+        The incremental changes essentially flow recursively throughout the graph, with nodes updating their tables and recursively propagating any changes.
+
+        Proactive protocol, and is generally wasteful of energy.
+    }
+    \subsection*{Dynamic Source Routing}
+    {
+        Style of flood routing, but we only flood route requests rather than the data -- less data, and we can cache the route taken.
+
+        When a node needs to communicate it sends a packet to its neighbours requesting a route to the destination. Nodes receive the packet, add themselves to the route stored inside it, and propagate to their neighbours.
+
+        When the packet reaches the destination, it sends a confirmation back to the source along the reverse path in the packet, and the source transmits the data.
+
+        If links are non-symmetric, then the destination might need to send a route request for A as it can't just use the reverse path.
+
+        Use sequence numbers on packets to avoid routing loops, and nodes can cache the partial routes they see in packets to reduce the number of route requests.
+    }
+    \subsection*{Zone Routing Protocol}
+    {
+        Combines reactive and proactive approaches: each node proactively maintains routes in a zone around itself, then an inter-zone protocol is used to reactively determine routes between the zones.
+    }
+}
+\section*{Delay-Tolerant Networks}
+{
+    Ad-hoc networks where there's \textbf{not necessarily a complete path from source to destination at the same time}. Nodes can accept a packet and deliver it later.
+
+    \subsection*{Epidemic Routing}
+    {
+        Flood protocol which allows nodes to store packets before forwarding.
+
+        Packets are passed to a configurable fraction of neighbours of each node, which store it for a while. As nodes travel and meet new neighbours, they forward the message and \textbf{stop remembering it} after a while.
+
+        Needs large buffers on nodes, and the forwarding number needs tuning to avoid network transmissions and collisions.
+    }
+    \subsection*{Context Aware Routing}
+    {
+        Improvement to epidemic routing: instead of blindly forwarding to neighbours, nodes present information about their mobility and commonly-visited neighbourhoods, and maybe even allow preferences as to their route.
+
+        Based on the exposed metrics, transmitting nodes pick neighbours which have the best chance of reaching the destination, or maybe delay sending until there's more choice.
+
+        Combine the following metrics with a utility function:
+        \begin{itemize}
+        \item Mobility (how much/often the node moves).
+        \item Host colocation with destination (use a Kalman filter to predict future host colocation based on prevous colocation).
+        \item Energy budget.
+        \end{itemize}
+    }
+}
+\section*{Mobile Sensor Networks}
+{
+    Sensor networks produce far more data far more easily than traditional manual monitoring. Usually have a large number of low-unit-cost battery-powered wireless devices.
+
+    \begin{itemize}
+    \item Structural health monitoring (humidity, stress, vibrations, ...).
+    \item Environmental monitoring (air quality, noise pollution, ...).
+    \item Animal behaviour.
+    \item Warehouse logistics.
+    \end{itemize}
+
+    Can use ad-hoc networks between sensors, with a few static gateways on the edge to link the network to the internet.
+
+    Differences from mobile sensor systems:
+    \begin{itemize}
+    \item Sensor nodes are prone to failure, as they're often deployed in harsh conditions.
+    \item Higher numbers of nodes, so each unit is cheaper and more resource constrained than a mobile node.
+    \item Usually a relatively static layout -- sensor nodes don't usually move, or only a subset do.
+    \end{itemize}
+
+    \subsection*{Energy Consumption}
+    {
+        Local computation is cheap -- running the processor, keeping stuff in RAM, sampling sensors is all inexpensive. \textbf{The \textit{radio} is the main energy sink}. \textbf{Idle listening is as expensive as transmitting}, so the cost is on the receiver.
+
+        To improve power efficiency, want to switch off the radio on sensors \textbf{instead of leaving it idle}.
+    }
+    \subsection*{Radio Duty Cycling}
+    {
+        Use a global clock across sensors to have them all only activate radios at a specific time, and spend the rest of the time turned off. Requires precise synchronisation or the sensors remain idle for too long.
+    }
+    \subsection*{Sensor-MAC (S-MAC)}
+    {
+        \textbf{Synchronised protocol}: negotiates a communication schedule among neighbouring nodes. Each node has a specific \textbf{wakeup} schedule that determines when it idly activates the antenna.
+
+        Every node knows each neighbour's wakeup schedule.
+
+        3 phases during each activation:
+        \begin{enumerate}
+        \item SYNC: Use CSMA to tell neighbour nodes about the node's wakeup schedule.
+        \item RTS: Listen for RTS packets, if we receive one then run the CTS stage -- otherwise go back to sleep after the period.
+        \item CTS: Send a CTS to the requesting node, extend the wakeup time so we can receive the data.
+        \end{enumerate}
+
+        When a node wants to transmit to a destination, it sleeps until the next active time in the \textbf{destination's schedule} and then sends a RTS.
+
+        New nodes try to pick up an existing wake schedule, rather than make their own one. If a node learns of two different schedules, we end up with \textbf{synchronised islands} -- the node has to follow \textbf{both wakeup schemes} so wastes more energy.
+    }
+    \subsection*{Low Power Listening (LPL)}
+    {
+        \textbf{Asynchronous protocol}: relies on \textbf{preambles} to connect a transmitter to the relevant receivers.
+
+        Receivers sleep and only periodically sample the channel. Senders prefix the message with a long transmission of meaningless data, so that when a receiver wakes up it notices that there's something about to be sent and stays awake to see what it is.
+
+        Issues:
+        \begin{itemize}
+        \item Overhearing: All receivers listening to the preamble have to stay awake to hear who the intended receiver is.
+        \item Long preamble wastes energy in transmission and for receivers who stay awake until it's over.
+        \item Latency introduced by the additional information.
+        \end{itemize}
+    }
+    \subsection*{X-MAC}
+    {
+        \begin{minipage}[t]{0.55\textwidth}
+        Improvement on LPL:
+        \begin{itemize}
+        \item Use multiple shorter preambles (shorter summed length than a long preamble).
+        \item Include target address information in the preamble so receivers can tell if it's for them or not.
+        \item
+        {
+            When a receiver notices a preamble:
+            \begin{itemize}
+            \item If they're not the target receiver, they go back to sleep.
+            \item Otherwise, they send an ack signal to the transmitter, which terminates the preamble early and allows for immediate communication.
+            \end{itemize}
+        }
+        \end{itemize}
+
+        Significant improvement on energy and time cost, and not much more complicated.
+        \end{minipage}
+        \hspace{3mm}
+        \begin{minipage}[t]{0.4\textwidth}
+        \vspace{0pt}
+        \centering
+        \includegraphics[width=\textwidth]{xmac.png}
+        \end{minipage}
+    }
+    \subsection*{Low-Energy Adaptive Clustering Hierarchy (LEACH)}
+    {
+        Group nodes into clusters controlled by a clusterhead. Nodes talk to the clusterhead cheaply, clusterhead talks to the centralised data sink.
+
+        Aim is to offload expensive communication onto a subset of nodes, and transfer responsibility frequently to prevent nodes dying quickly. Non-clusterhead nodes can communicate cheaply using TDMA (only transmit if they need to, so no wasted energy on normal nodes). Clusterheads drain power quickly as they have to be idly receiving constantly.
+
+        \textbf{Assumptions}:
+        \begin{itemize}
+        \item \textbf{Dense network of nodes}
+        \item \textbf{Nodes report to a clusterhead}
+        \item \textbf{All nodes in a cluster can communicate with the clusterhead directly}
+        \item \textbf{Clusterheads can reach a central sink in one hop}
+        \end{itemize}
+
+        \begin{enumerate}
+        \item
+        {
+            Setup:
+            \begin{enumerate}
+            \item Clusterheads elect themselves based on a probability for each node (and not being a clusterhead too frequently).
+            \item Nodes join the nearby clusterhead with the strongest signal.
+            \item Clusterheads organise CDMA between heads, and set up TDMA between nodes within a cluster.
+            \end{enumerate}
+        }
+        \item Steady State: Clusterheads collect and \textbf{aggregate} data from cluster members, then transmit it to the central sink using CSMA. Aggregation can be as simple as concatenating packets -- still reduces overhead so is more efficient.
+        \item Each `\textbf{round}' of LEACH is a fixed duration, after which clusterheads are selected again and the process repeats.
+        \end{enumerate}
+    }
+}
+\section*{Internet of Things}
+{
+    \begin{minipage}[t]{0.65\textwidth}
+    \setlength{\parskip}{8pt}
+    Extend internet connectivity into everyday things -- embed internet-capable devices into things. Allows for metrics and data and remote control.
+
+    Scopes:
+    \begin{itemize}
+    \item Devices: sensor nodes, mobile phones, wearable gear, ....
+    \item Machines: home appliances, vehicles, security systems, ....
+    \item Environments: smart homes, buildings, cities, ....
+    \end{itemize}
+
+    Typical Architecture:
+    \begin{itemize}
+    \item Device: basic processing, short communications. Perform sensing and/or actuation.
+    \item Gateway: edge analytics and local storage, routing.
+    \item Cloud: service hosting, visualisation, advanced analytics, long-term data storage.
+    \end{itemize}
+    \end{minipage}
+    \hspace{3mm}
+    \begin{minipage}[t]{0.3\textwidth}
+    \vspace{0pt}
+    \centering
+    \includegraphics[width=\textwidth]{iot.png}
+    \end{minipage}
+}
+\section*{Communication Technologies}
+{
+    \begin{center}
+    \includegraphics[width=0.5\textwidth]{commtech1.png}
+    \includegraphics[width=0.45\textwidth]{commtech2.png}
+    \end{center}
+
+    \textbf{Low Power Wide Area Networks} (\textbf{LPWANs}) are an outlier in the existing communication technologies, and are what IoT and mobile devices need:
+    \begin{itemize}
+    \item Large ranges.
+    \item Very small bandwidth requirements.
+    \item Low power.
+    \item Deep indoor penetration.
+    \item Cheap and small radio modules.
+    \item Usually relatively \textbf{delay tolerant} -- maybe only transmit a few packets each hour.
+    \end{itemize}
+
+    \textbf{LoRaWAN} is a protocol for LPWAN applications. Covers three types of end-device classes:
+    \begin{description}
+    \item[Class A]
+    {\hfill
+        \begin{itemize}
+        \item Battery powered
+        \item Bidirectional communication
+        \item Initiates communication, isn't contacted by a remote
+        \item Low power consumption, but high latency
+        \end{itemize}
+    }
+    \item[Class B]
+    {\hfill
+        \begin{itemize}
+        \item Battery powered
+        \item Same as Class A but has more receive windows -- used for eg.\ edge devices and routers
+        \item High power consumption, low latency
+        \end{itemize}
+    }
+    \item[Class C]
+    {\hfill
+        \begin{itemize}
+        \item Mains-powered
+        \item Constantly receiving, base station equivalent
+        \item High power consumption, low latency
+        \end{itemize}
+    }
+    \end{description}
+}
+\section*{Sensor Network Routing}
+{
+    Routing specifically in networks of sensors -- aims are different, it's less commonly communication and more just data reporting to a single sink/data fetching by a single requester.
+
+    Specific nodes are interested in specific events -- a sink is interested in a sensor's reading changing.
+
+    Can still use ad-hoc networks like epidemic, DSDV, but there's an overhead from the general-purpose design. Additionally, they're more usually built for disconnections/delay tolerance, whereas sensor networks are normally static.
+
+    Want \textbf{pub/sub} control, with a device subscribing to a type of data and then receiving relevant messages.
+
+    \subsection*{Aggregation}
+    {
+        Quick diversion -- sending fewer packets saves energy, so particularly in sensor networks, may want to combine data:
+        \begin{itemize}
+        \item Average/min/max of readings.
+        \item Compress results.
+        \item Minor pre-processing on-device, rather than doing it all at the destination.
+        \end{itemize}
+    }
+    \subsection*{Directed Diffusion}
+    {
+        Nodes send `\textbf{interests}' for data which get diffused through the network -- sensor data is tagged with interests and routed.
+
+        Each node remembers which neighbours had which interests (propagated recursively). Interests have a `rate of events', called `\textbf{gradient}' -- sensor data sources emit events to neighbours which have a gradient for the data's interest at a \textbf{rate proportional to the interest gradient}: a higher gradient results in more events being sent.
+
+        Event IDs are stored to avoid cycles (check event hasn't been received before).
+
+        When gradients are established the rate is defined as a low default value. Sinks `reinforce' good paths, which results in a greater gradient and higher rate.
+
+        Paths expire after a timeout so if not reinforced, they cease to exist. This allows for adaptation in the network.
+
+        \textbf{Intermediate or sink nodes which receive duplicate data can choose to not reinforce the gradient on a redundant link} -- this allows nodes to control the paths used by data, and with a good utility function causes the interest paths to naturally converge to good routes.
+
+        \subsubsection*{Extensions}
+        {
+            Push diffusion: if there are more receivers than senders, it's more efficient to flood the data rather than interests -- can still use gradients, but they're for data rather than interests.
+        }
+        \subsubsection*{Issues}
+        {
+            No consideration of link stability or link load.
+
+            MAC layer issues -- assumes that nodes are listening all the time.
+        }
+    }
+    \subsection*{MinT Routing}
+    {
+        Number of hops isn't necessarily a good metric in sensor networks -- reliability has a big impact on energy efficiency as retransmissions are expensive.
+
+        MinT routing is distance-vector but using an estimation of the cost of retransmitting over the whole route, using relatively realistic link cost estimates.
+    }
+}
+\section*{Mobile and Wearable Sensors}
+{
+    General-purpose sensors with a general-purpose multi-tasking OS, well-suited for human activities and easily maintainable (easy to update, user recharges device). Contrast to mobile sensor systems, which are made for measuring specific phenomena in a specific environment, with all resources dedicated to that.
+
+    \textbf{Human Activity Detection}: accelerometer or gyroscope, used to infer eg.\ walking/running/cycling. Used for fitness monitoring.
+    
+    \textbf{Transportation Mode Detection}: accel and gyro, but also GPS and WiFi localisation, to infer bus, bike, car, etc. Used for smart commuting, data-driven transport network decisions.
+
+    \textbf{Emotion Detection}: microphone, location data. Maps speaking features to emotional state -- used for social science experiments and behaviour intervention.
+
+    \textbf{Context and Environment}: microphone, camera. Infers the social activity, used for health and wellness or eg.\ automated diary.
+
+    Broad issues: heterogeneity of sensors reduce generalisation of techniques due to sensitivity/power/frequency differences. Privacy issues are big, measurements are noisy, and there's limited processing/battery power.
 }
 \end{document}
