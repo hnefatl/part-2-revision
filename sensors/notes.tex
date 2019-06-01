@@ -1,0 +1,97 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{titlesec}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.5cm]{geometry}
+\usepackage{prftree}
+\usepackage{changepage}
+\usepackage{enumitem}
+\usepackage{minted}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{ulem}
+\usepackage{marvosym}
+\usepackage{xcolor}
+\usepackage{mathtools}
+\usepackage{bm}
+
+\title{\vspace{-2cm}Mobile Sensor Systems\vspace{-1.5cm}}
+\author{}
+\date{}
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{2mm}
+\setlist{nosep}
+
+% Make ~ look more normal
+\let\oldsim\sim
+\renewcommand{\sim}{{\oldsim}}
+
+\newmintinline[monospace]{text}{escapeinside=\#\#, mathescape, fontsize=\normalsize}
+\newminted[monospacefigure]{text}{frame=lines, framesep=1mm, autogobble, escapeinside=\#\#, mathescape, breaklines}
+
+\titlespacing{\section}{0mm}{2mm}{2mm}
+\titlespacing{\subsection}{0mm}{2mm}{2mm}
+\titlespacing{\subsubsection}{0mm}{2mm}{2mm}
+
+\begin{document}
+\maketitle
+
+\section*{Background}
+{
+    12 billion mobile devices -- almost everyone has phones, now sensors and IOT etc.\ is gaining traction.
+
+    The internet is only available to most people through phones, no computers.
+
+    Mobile data traffic is \(\approx\)0.5 \textbf{exabytes} per day.
+
+    In the US, \(>\)50\% of internet access is through WiFi, rest is mostly 4G. In Nigeria 75\% is through 3G. Geographic areas have vastly different access patterns based on the infrastructure available and economics.
+
+    Phones have a multitude of sensors:
+    \begin{itemize}
+    \item Camera
+    \item Microphone
+    \item Fingerprint
+    \item Accelerometer
+    \item Gyroscope
+    \item Heart Rate
+    \end{itemize}
+
+    Mobile devices are resource- and energy-constrained. Connectivity is highly variable in \textbf{performance} and \textbf{reliability}. Mobile devices are inherently \textbf{less secure} (wireless communication means broadcast, which is snoopable).
+
+    Types of connectivity, with energy/reliability/rate limits:
+    \begin{itemize}
+    \item Cellular (SMS, 3G, 4G, ...)
+    \item WiFi
+    \item Bluetooth
+    \item NFC
+    \item Generic other radio communication
+    \end{itemize}
+
+    Wireless communication is generally organised as either:
+    \begin{itemize}
+    \item Infrastructure: Mobile devices connect to static base stations which are wired together into a trunk network. Handoff devices between base stations.
+    \item Ad-hoc: No base stations, devices communicate between themselves when they're in range or available. Node organise themselves into a network.
+    \end{itemize}
+
+    Medium (radio spectrum) is generally multiplexed between multiple devices:
+    \begin{itemize}
+    \item Time: fixed or dynamic.
+    \item Frequency: each communication gets a disjoint frequency band.
+    \end{itemize}
+
+    Multiplexing as above doesn't scale well with lots of devices or if communication is sparse. Ad-hoc approaches allow more statistical multiplexing:
+    \begin{itemize}
+    \item
+    {
+        CSMA/CD: transmit if nothing else is, jam if you detect a collision, random binary exponential backoff.
+        \begin{itemize}
+        \item Hidden Terminal:
+        \end{itemize}
+    }
+    \end{itemize}
+}
+\end{document}
