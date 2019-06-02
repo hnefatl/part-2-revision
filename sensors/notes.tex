@@ -82,7 +82,7 @@
     Wireless communication is generally organised as either:
     \begin{itemize}
     \item Infrastructure: Mobile devices connect to static base stations which are wired together into a trunk network. Handoff devices between base stations.
-    \item Ad-hoc: No base stations, devices communicate between themselves when they're in range or available. Node organise themselves into a network.
+    \item Ad-hoc/Mesh: No base stations, devices communicate between themselves when they're in range or available. Node organise themselves into a network.
     \end{itemize}
 
     Medium (radio spectrum) is generally multiplexed between multiple devices:
@@ -656,5 +656,39 @@
         \item \textbf{Tracking} uses fewer particles once we've found the state to improve efficiency.
         \end{itemize}
     }
+}
+\section*{Bluetooth Low Energy}
+{
+    Classical bluetooth is for replacing wires with wireless. BLE is for enabling new applications.
+
+    \textbf{2 main modes}:
+    \begin{itemize}
+    \item Advertise: Nodes broadcast eg.\ sensor information -- other nodes in range receive it if they want.
+    \item Connection: Masters can connect to slave nodes, which are found through advertising -- presumably just advertise as `connectable' and other nodes can directly connect.
+    \end{itemize}
+
+    Seems to be useful for application level, if we want broadcast communication it's easy, if we want connection then we just piggyback discovery on the existing service.
+
+    Technically a MAC protocol, it's below network layer.
+}
+\section*{Robots}
+{
+    \begin{description}
+    \item[Proprioceptive Sensors]: `body' sensors like motor speed, battery voltage, joint angle.
+    \item[Exteroceptive]: `environment' sensors like distance measurement, light intensity.
+    \item[Passive]: `measure ambient energy' like thermometers, microphones.
+    \item[Active]: `emit energy' like infrared/ultrasound proximity sensors.
+    \end{description}
+
+    \textbf{Coverage} aims to deploy sensors over an area in different ways:
+    \begin{description}
+    \item[Blanket]: \textbf{Static arrangement} to \textbf{cover} an area.
+    \item[Barrier]: \textbf{Static arrangement} to minimise the probability of undetected penetration of the barrier.
+    \item[Sweep]: \textbf{Move sensors} across an area to maximise the number of detections and minimise missed detections.
+    \end{description}
+
+    \textbf{Voronoi Coverage} defines families of blanket coverage styles that optimise the configuration of robots.
+
+    \textbf{Centroidal Voronoi Tessellation} (CVT): minimises the average distance between robots and all points in their cells -- optimal blanket arrangement.
 }
 \end{document}
