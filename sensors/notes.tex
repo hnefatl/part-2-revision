@@ -605,22 +605,56 @@
         }
         \subsubsection*{Particle Filters}
         {
-            More general than just location, but intuitive for location.
-
-            Have a floorplan, generate particles randomly in the environment with initial directions/velocities. As the device moves, move the particles a corresponding amount \textbf{+ noise} and remove particles which perform some impossible movement (through walls).
-
-            Resample particles to ensure we don't run out, with clusters of particles being more likely to spawn more.
-
-            Two stages:
-            \begin{itemize}
-            \item Localisation uses lots of particles to work out where the user is from an unknown initial state. 
-            \item Tracking uses fewer particles once we've found the location to improve efficiency.
-            \end{itemize}
+            Essentially a general particle filter using accelerometer for sensor input and domain-specific model being a floorplan and discarding particles that pass through walls.
         }
     }
 }
 \section*{Sensor Fusion}
 {
+    Sensor measurements are noisy, error creeps in whatever we do.
 
+    Idea is to estimate a true value using:
+    \begin{itemize}
+    \item Multiple measurements from the same sensor.
+    \item Multiple measurements from different sensors.
+    \item A domain-specific model of the constraints.
+    \end{itemize}
+
+    \textbf{Filters} estimate current state based on past and current measurements (live processing).
+
+    \textbf{Smoothers} are post-processing, they use past, current, and future measurements to `smooth' the data.
+
+    \subsection*{Kalman Filter}
+    {
+        Write the rules of the system with linear algebra (current state as a vector, motion model as a linear transform, ...). Introduce error to each term.
+
+        \begin{enumerate}
+        \item Start with an estimate of the initial position as a Gaussian representing the belief of that state.
+        \item Update the estimate with the motion model to form a predition.
+        \item Perform a measurement to get a noisy reading of the current measurement.
+        \item Multiply the two Gaussian distributions together to get an updated prediction.
+        \end{enumerate}
+
+        Very fast, very accurate with good initial state, used everywhere.
+
+        If the probability distributions aren't really Gaussian, can be inaccurate (need domain-specific info to encode eg.\ a floorplan).
+    }
+    \subsection*{Particle Filter}
+    {
+        Encode state in particles within a state space:
+        \begin{enumerate}
+        \item \textbf{Propagate} (new predictions): In the floorplan example, move them in the encoded direction by a step length.
+        \item \textbf{Correct}: reassign the probabilities of the particles, our belief that they're correct. In the floorplan example, particles passing through a wall would be corrected to 0 probability.
+        \item \textbf{Resample}: Generate a new set of particles by sampling the old one in proportion to the weights of the particles. Low probability particles are less likely to have new particles near them.
+        \end{enumerate}
+
+        Allows starting with no knowledge of initial state.
+
+        Two general phases:
+        \begin{itemize}
+        \item \textbf{Localisation} uses lots of particles to find the current state is from an unknown initial state. 
+        \item \textbf{Tracking} uses fewer particles once we've found the state to improve efficiency.
+        \end{itemize}
+    }
 }
 \end{document}
