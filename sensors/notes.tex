@@ -534,6 +534,93 @@
 }
 \section*{Localisation}
 {
-    
+    With eg.\ WiFi/GPS positioning, we measure the \textbf{time-of-flight} (ToF) of signals from various base-stations with known position to the receiver, then use trilateration to place the device.
+
+    Reflections of signals are fine for communication, but make positioning way harder -- indoors is significantly harder than outdoors. Outdoors is still hard, as a difference of 1\(\mu\)s is 300m.
+
+    \subsection*{Timed Difference of Arrival (TDoA)}
+    {
+        Sync all the static clocks (lay wire between them, or use atomic clocks). The device transmits a signal at time \(t_p\), and static stations detect at times \(t_A,t_B,t_C\). Then:
+        \begin{gather*}
+        c(t_A - t_p) = d_{AP}
+        \qquad
+        c(t_B - t_p) = d_{BP}
+        \\
+        c(t_A - t_C) = d_{AP} - d_{BP}
+        \end{gather*}
+
+        The 3 equations define 3 hyperbolas, and their intersection is the transmitter location.
+    }
+    \subsection*{GPS}
+    {
+        TDoA system but the satellites are both the `static' devices and the transmitters. Each satellite sends the time at the satellite, and the device finds the relative local clock skew. After multiple readings from GPS, have equations for location.
+    }
+    \subsection*{Cellular Localisation}
+    {
+        Cell towers give coarse proximity for devices connected to it (varying ranges depending on eg.\ rural vs urban base-station).
+
+        Use TDoA with the base-stations, base-stations use GPS to sync.
+    }
+    \subsection*{Wardriving}
+    {
+        WiFi fingerprinting on a large scale -- build up national maps of WiFi networks using GPS location and a WiFi receiver, can then get \(\approx\)50m accuracy on devices just by seeing what networks are available.
+    }
+    \subsection*{Angle of Arrival (AoA)}
+    {
+        Use multiple antenna positioned slightly apart to detect time differences in reception, and infer the angle of the transmitter.
+
+        Still has issues with reflection/multipath, but gives direction information rather than radius information.
+    }
+    \subsection*{Indoor Location}
+    {
+        GPS fails -- it can't penetrate or gets reflected, and even if we had accurate measurements of eg.\ 3m, that's too large scale for indoor use.
+
+        \subsubsection*{Active Badge}
+        {
+            Original microlocation device -- room-scale location by transmitting an ID using infrared, with sensors in rooms detecting the IDs.
+        }
+        \subsubsection*{BLE Beacons}
+        {
+            Beacon range of 1-3m, can position around an indoor environment and use a database of beacon positions for coarse positioning.
+        }
+        \subsubsection*{Phillips Lights}
+        {
+            Lights flicker faster than we can see, then phone cameras decode the flicker sequences into room IDs.
+        }
+        \subsubsection*{Bat System}
+        {
+            TDoA where the device transmits to a network of receivers in the roof, connected in a mesh.
+
+            Uses \textbf{ultrasound}, which is slower so more easily measurable than radio. Can get 3cm accuracy.
+
+            Ultrasound has low penetration, which contains it inside a room but also means the device effectively needs line-of-sight to ceiling sensors. It's also disturbing to animals, and easy to disrupt.
+        }
+        \subsubsection*{WiFi Fingerprinting}
+        {
+            Perform a manual mapping of the signals available and their strengths at points in an environment.
+
+            Devices measure signals when moving and finds the closest matching recorded location.
+
+            Issues when APs die or are moved. Can give every non-present AP a baseline strength (eg.\ lowest possible reception strength), so that comparisons are more balanced, but every approach has nasty corner cases.
+        }
+        \subsubsection*{Particle Filters}
+        {
+            More general than just location, but intuitive for location.
+
+            Have a floorplan, generate particles randomly in the environment with initial directions/velocities. As the device moves, move the particles a corresponding amount \textbf{+ noise} and remove particles which perform some impossible movement (through walls).
+
+            Resample particles to ensure we don't run out, with clusters of particles being more likely to spawn more.
+
+            Two stages:
+            \begin{itemize}
+            \item Localisation uses lots of particles to work out where the user is from an unknown initial state. 
+            \item Tracking uses fewer particles once we've found the location to improve efficiency.
+            \end{itemize}
+        }
+    }
+}
+\section*{Sensor Fusion}
+{
+
 }
 \end{document}
