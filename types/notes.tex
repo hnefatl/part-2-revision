@@ -6,8 +6,9 @@
 \usepackage[margin=2cm]{geometry}
 \usepackage{prftree}
 \usepackage{changepage}
+\usepackage{bm}
 
-\title{\vspace{-1cm}Types\vspace{-1cm}}
+\title{\vspace{-2cm}Types\vspace{-1.5cm}}
 \author{}
 \date{}
 
@@ -20,16 +21,105 @@
 
 \begin{document}
 \maketitle
+
+\begin{description}
+\item[Progress]\quad If \(\cdot\vdash e : \tau\) then either \(e\) is a value or \(\exists e'.\;e \leadsto e'\).
+\item[Preservation]\quad If \(\Gamma\vdash e : \tau\) and \(\exists e'.\;e \leadsto e'\) then \(\Gamma\vdash e' : \tau\).
+\item[PLC]
+{
+    \begin{gather*}
+    \prftree[r]{}
+    {\Theta,\alpha;\Gamma \vdash e : A}
+    {\Theta;\Gamma \vdash (\Lambda\alpha.\;e) : \forall\alpha.\;A}
+    \hspace{2cm}
+    \prftree[r]{}
+    {\Theta;\Gamma \vdash e : \forall\alpha.B}
+    {\Theta;\Gamma \vdash (e\;A) : B[A/\alpha]}
+    \end{gather*}
+} 
+\item[Existentials]
+{
+    \begin{gather*}
+    \prftree[r]{}
+    {\Theta,\alpha;\Gamma \vdash A \text{ type}}
+    {\Theta;\Gamma \vdash C \text{ type}}
+    {\Theta;\Gamma \vdash e : A[C/\alpha]}
+    {\Theta;\Gamma \vdash \text{pack}_{\alpha,A}(C,e) : \exists \alpha.\;A}
+    \\
+    \\
+    \prftree[r]{}
+    {\Theta;\Gamma \vdash e_1 : \exists\alpha.\;A}
+    {\Theta,\alpha;\Gamma,x:A \vdash e_2 : B}
+    {\Theta;\Gamma \vdash \text{let pack}(\alpha,x) = e_1\text{ in }e_2 : B}
+    \end{gather*}
+}
+\item[Monads]
+{\hfill
+
+    Relation \(\div\) for effectful statements, can be encapsulated and passed around pure code using \(\{e\}\) which places effectful expressions in a monad \(T\).
+
+    \begin{gather*}
+    \prftree[r]{}
+    {\Sigma;\Gamma \vdash e : A}
+    {\Sigma;\Gamma \vdash \text{return }e \div A}
+    \hspace{2cm}
+    \prftree[r]{}
+    {\Sigma;\Gamma \vdash e_1 : T A}
+    {\Sigma;\Gamma,x:A \vdash e_2 \div B}
+    {\Sigma;\Gamma \vdash \text{let }x = e_1; e_2 \div B}
+    \\
+    \\
+    \prftree[r]{}
+    {\Sigma;\Gamma \vdash e \div A}
+    {\Sigma;\Gamma \vdash \{e\} : T A}
+    \end{gather*}
+}
+\item[Classical Logic]
+{\hfill
+
+    To prove something holds, use a \(\mu x:A.\;c\) term to \textbf{assume \(A\) with proof \(x\) and derive a contradiction \(c\)}. Contradiction terms \(\langle e \mid_B k \rangle\) show \(B\) is true with \(e\) and false with \(k\).
+
+    \begin{gather*}
+    \prftree[r]{}
+    {\Gamma;\Delta,\bm{x:A} \vdash c\text{ contr}}
+    {\Gamma;\Delta \vdash (\mu x:A.\;c) : A\text{ true}}
+    \hspace{2cm}
+    \prftree[r]{}
+    {\Gamma,\bm{x:A};\Delta \vdash c\text{ contr}}
+    {\Gamma;\Delta \vdash (\mu x:A.\;c) : A\text{ false}}
+    \\
+    \\
+    \prftree[r]{}
+    {\Gamma;\Delta \vdash e : B\text{ true}}
+    {\Gamma;\Delta \vdash k : B\text{ false}}
+    {\Gamma;\Delta \vdash \langle e \mid_B k \rangle \text{ contr}}
+    \end{gather*}
+}
+\item[Data]
+{\hfill
+
+    PLC can represent datatypes as functions -- no need for axiomatic definitions. Eg.
+
+    \begin{tabular}{c | l}
+    Builtin & Encoding \\
+    \hline
+    \(X+Y\) & \(\forall\alpha.\;(X\rightarrow\alpha)\rightarrow(Y\rightarrow\alpha)\rightarrow\alpha\) \\
+    L \(e\) & \(\Lambda\alpha.\;\lambda f:(X\rightarrow\alpha).\;\lambda g:(Y\rightarrow\alpha).\;f\;e\) \\
+    R \(e\) & \(\Lambda\alpha.\;\lambda f:(X\rightarrow\alpha).\;\lambda g:(Y\rightarrow\alpha).\;g\;e\) \\
+    case\((e,\text{L }x\rightarrow e_1,\text{R }y\rightarrow e_2) : Z\) & \(e\;Z\;(\lambda x:(X \rightarrow
+    Z).\;e_1)\;(\lambda y:(Y \rightarrow Z).\;e_2)\)
+    \end{tabular}
+}
+\end{description}
+
 \section{Proof}
 {
     \subsubsection*{Structural Induction}
     {
-
         Proof based on the rules, so `structural induction on \(\vdash\)' not `on \(\Gamma\vdash e : \tau\)'.
 
         For each rule, the `case' is the rule. We assume that both the judgements on the top hold (as they're subterms)
         and that the hypothesis holds \textbf{on those terms}.
-    
     }
 }
 \section{Terminology}
@@ -129,7 +219,6 @@
         Typechecking only succeeds for well-formed types.
 
         Proof by structural induction on \(\Theta;\Gamma\vdash e:A\).
-    
     }
     \end{description}
 }
@@ -149,11 +238,9 @@
 
     Natural for defining functions: \(\text{fun}_{\texttt{int}\rightarrow\texttt{int}}\;fact\;n.\;\text{if }n = 0
     \text{ then }1\text{ else }n \times fact (n-1)\). Also allows for infinite recursion, so no longer total/consistent.
-
 }
 \section{The Halt Relation}
 {
-
     \(e\) halts iff \(\exists v.\; e \leadsto^* v\).
 
     Define a type-indexed family of sets of terms: 
@@ -179,18 +266,15 @@
         Proof by induction on the `type indices' to the sets, ie.\ by structural induction where we need to prove the
         lemma for the types \(X = 1, Y \rightarrow Z, ...\), assuming for the IH that \(\text{Halt}_t\) holds for all
         subtypes \(t\) of \(X\).
-
     }
     \subsection*{The Fundamental Lemma}
     {
-        
         If \(\forall n \geq 0\), \(x_1:X_1,...,x_n:X_n \vdash e : Z\) and \(\forall i\in[1..n]\), \(\cdot\vdash
         v_i:X_i\) and \(v_i \in \text{Halt}_{X_i}\), then \([v_1/x_1,...,v_n/x_n]e \in \text{Halt}_Z\).
 
         Proof by structural induction on \(x_1:X_1,...,x_n:X_n \vdash e : Z\) (go through the rules).
 
         This is powerful as it says that \textit{all well-typed terms terminate}.
-
     }
     \subsection*{Consistency}
     {
@@ -198,15 +282,12 @@
 
         Assume \(\Gamma\vdash e : 0\), then by the fundamental lemma (with \(n=0\)) \(e \in \text{Halt}_0\). But by the
         definition of \(\text{Halt}_0\), \(e\notin\text{Halt}_0\), so contradiction.
-
     }
 }
 \section{Halt for System F}
 {
-
     Similar to Halt for STLC, but uses a semantic interpretation to define the sets. Probably too complex to be expected
     to remember, rules would be given in exam.
-
 }
 \section{Datatypes}
 {
@@ -261,7 +342,7 @@
                                     &= (\Lambda\alpha.\;\lambda x:\alpha.\;\lambda y:\alpha.\;x)\;A\;e'\;e'' \\
                                     &= (\lambda x:A.\;\lambda y:A.\;x)\;e'\;e'' \\
                                     &= (\lambda y:A.\;e')\;e'' \\
-                                    &= e' \\
+                                    &= e'
         \end{align*}
     }
 }
@@ -298,23 +379,18 @@
     \begin{itemize}
     \item
     {
-
         \(\text{pack}_{\alpha,A}(C,e)\) packs a implementation \(e\) with concrete type \(C\) into a provider for the
         \(\alpha,A\) interface.
-
     }
     \item
     {
-
         \(\text{let pack}(\alpha, x) = \text{pack}_{\alpha,A}(C,v)\text{ in }e\) unpacks a provider for the \(\alpha,A\)
         interface into the concrete type and implementation \(\alpha\) and \(x\).
-
     }
     \end{itemize}
 
     \subsection*{Encoding}
     {
-
         \begin{tabular}{l | l}
         Original & Encoding \\
         \hline
@@ -326,7 +402,6 @@
 }
 \section{State}
 {
-
     \begin{alignat*}{4}
     &\text{Types } &&X &&::= ... \mid \text{ref }X && \\
     &\text{Terms } &&e &&::= ... \mid \text{new }e \mid\;!e \mid e := e' \mid l && \\
@@ -383,18 +458,14 @@
         }
         \subsubsection*{Preservation Repaired}
         {
-
             If \(\langle\sigma;e\rangle : \langle\Sigma;X\rangle\) and
             \(\langle\sigma;e\rangle\leadsto\langle\sigma';e'\rangle\), then there exists a \(\Sigma'\geq\Sigma\) such
             that \(\langle\sigma';e'\rangle : \langle\Sigma';X\rangle\).
-
         }
     }
     \subsection*{Recursion}
     {
-
         With state we can perform recursion even in the STLC, by storing and updating a function in a reference.
-
     }
 }
 \section{Monads}
@@ -424,7 +495,7 @@
     \qquad
     \prftree[r]{}
     {\Sigma;\Gamma\vdash e : T\;X}
-    {\Sigma;\Gamma,x:X \vdash t \div X}
+    {\Sigma;\Gamma,x:X \vdash t \div Z}
     {\Sigma;\Gamma\vdash\text{let }x=e;\;t\div Z}
     \qquad
     ...
@@ -442,7 +513,6 @@
 {
     \subsection*{Logic}
     {
-
         Step away from the intuitionistic view of refutations being deriving (\(\neg P
         \stackrel{\text{def}}{=}P\Longrightarrow\bot\)) by making them first-class.
 
@@ -544,11 +614,9 @@
         {\Gamma;\Delta\vdash A\text{ false}}
         {\Gamma;\Delta\vdash \text{ contr}}
         \end{gather*}
-
     }
     \subsection*{Language}
     {
-
         STLC + continuations. Essentially mirrors the logic:
 
         \begin{alignat*}{4}
@@ -660,12 +728,12 @@
         \begin{gather*}
         \langle\langle e_1,e_2 \rangle \mid_{A \wedge B} \text{fst }k\rangle \leadsto \langle e_1 \mid_A k \rangle
         \qquad
-        \langle \text{R }e \rangle \mid_{A \wedge B} [k_1,k_2] \rangle \leadsto \langle e \mid_A k_2 \rangle
+        \langle \text{R }e \mid_{A \wedge B} [k_1,k_2] \rangle \leadsto \langle e \mid_A k_2 \rangle
         \\
         \\
         \langle\langle e_1,e_2 \rangle \mid_{A \wedge B} \text{snd }k\rangle \leadsto \langle e_2 \mid_A k \rangle
         \qquad
-        \langle \text{L }e \rangle \mid_{A \wedge B} [k_1,k_2] \rangle \leadsto \langle e \mid_A k_1 \rangle
+        \langle \text{L }e \mid_{A \wedge B} [k_1,k_2] \rangle \leadsto \langle e \mid_A k_1 \rangle
         \\
         \\
         \langle \text{not}(k) \mid_{\neg A} \text{not}(e) \rangle \leadsto \langle e \mid_A k \rangle
@@ -748,7 +816,6 @@
 }
 \section{Embedding Classical Logic into Intuitionistic Logic}
 {
-    
     Translating from the continuation language into STLC.
 
     Pick an arbitrary proposition \(p\) to act as false. Define \(\sim X \stackrel{\text{def}}{=}X \rightarrow P\).
@@ -782,11 +849,9 @@
     \text{tne }q \\
     & \text{dne}_{\neg A} &&= \lambda q : \sim\sim\underbrace{\sim A^\circ}_{(\neg A)^\circ}.\; \text{tne }q
     \end{alignat*}
-
 }
 \section{Dependent Types}
 {
-
     Types can include terms: merge the grammars, use judgements to decide if something is a type or a term.
 
     Some terms constitute proofs: \(\text{refl }e\) is a proof that \textit{something}?
@@ -880,7 +945,6 @@
 
     Also rules defining \(\equiv\) with normal equivalence relation rules, and congruence rules defining equality
     between terms. Gives power to the final rule given above, as it allows computation \textit{within} types.
-
 }
 \section{Languages}
 {
@@ -1016,7 +1080,6 @@
     }
     \subsection*{Polymorphic Lambda Calculus/System F}
     {
-
         \begin{alignat*}{4}
         &\text{Types } &&A &&::= \alpha \mid A \rightarrow A \mid \forall\alpha.\;A && \\
         &\text{Terms } &&e &&::= x \mid \lambda x:X.\;e \mid e\;e \mid \Lambda\alpha.\;e \mid
