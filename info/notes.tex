@@ -199,6 +199,8 @@
 
         \textbf{Prefix Property}: No codeword is the prefix of a longer codeword. If a code satisfies this property, it's instantaneously decodable (we don't need to wait to receive more bits before starting to decode).
 
+        \textbf{Instantaneous implies Uniquely Decodable}.
+
         \begin{tabular}{c | l | l | l | l}
         \(x\) & \(p(x)\) & Code 1 & Code 2 & Code 3 \\
         \hline
@@ -241,6 +243,8 @@
         \[\sum_{i=1}^N{\frac{1}{2^{c_i}}} \leq 1\]
 
         This condition is \textbf{necessary but not sufficient} (use to show that a code isn't instantaneous, not that it is).
+
+        As instantaneous implies uniquely decodable, this inequality can also disprove unique decodability.
     }
 }
 \section*{Channels}

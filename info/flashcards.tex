@@ -1,0 +1,13 @@
+\documentclass[multi=page, border=1cm]{standalone}
+
+\newcommand{\card}[2]{
+    \begin{page}\Huge #1\end{page}
+    \begin{page}\Huge #2\end{page}
+}
+\newcommand{\mathcard}[2]{\card{#1}{\(#2\)}}
+
+\pagestyle{empty}
+
+\begin{document}
+\mathcard{Entropy}{H = -\sum_i{p_i\log_2{p_i}}}
+\end{document}
