@@ -16,10 +16,10 @@ num_files="$(ls $card_dir/*.pdf | wc -l)"
 num_cards=$((num_files / 2))
 
 # Test
-while true ; do
-    rand_num=$((RANDOM % num_cards))
-    q_card=$((2 * rand_num + 1))
-    a_card=$((2 * rand_num + 2))
+order="$(seq 1 $num_cards | shuf)"
+for i in $order ; do
+    q_card=$((2 * i + 1))
+    a_card=$((2 * i + 2))
     mupdf "$card_dir/page$q_card.pdf"
     mupdf "$card_dir/page$a_card.pdf"
 done
