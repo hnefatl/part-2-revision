@@ -2,6 +2,11 @@
 
 card_dir=flashcards
 
+function cleanup {
+    rm -r "$card_dir"
+}
+trap cleanup EXIT
+
 # Split the flashcards into a page per file
 mkdir -p "$card_dir"
 pdftk flashcards.pdf burst output "$card_dir/page%d.pdf"
@@ -10,6 +15,7 @@ rm "$card_dir/doc_data.txt"
 num_files="$(ls $card_dir/*.pdf | wc -l)"
 num_cards=$((num_files / 2))
 
+# Test
 while true ; do
     rand_num=$((RANDOM % num_cards))
     q_card=$((2 * rand_num + 1))

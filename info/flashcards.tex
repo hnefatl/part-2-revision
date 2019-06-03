@@ -1,13 +1,31 @@
 \documentclass[multi=page, border=1cm]{standalone}
 
+\usepackage{graphicx}
+
 \newcommand{\card}[2]{
-    \begin{page}\Huge #1\end{page}
-    \begin{page}\Huge #2\end{page}
+    \begin{page}\scalebox{4}{#1}\end{page}
+    \begin{page}\scalebox{4}{#2}\end{page}
 }
-\newcommand{\mathcard}[2]{\card{#1}{\(#2\)}}
+\newcommand{\mathcard}[2]{\card{#1}{\(\displaystyle #2\)}}
 
 \pagestyle{empty}
 
 \begin{document}
-\mathcard{Entropy}{H = -\sum_i{p_i\log_2{p_i}}}
+
+\mathcard{Entropy}{H = \sum_i{p_i\log_2{\frac{1}{p_i}}}}
+\mathcard{Conditional Entropy}{H(X \mid Y) = \sum_{x,y}{ p(x, y) \log\frac{1}{p(x \mid y)} }}
+\mathcard{Mutual Information}{I(X;Y) = \sum_{x,y}{ p(x,y)\log\frac{p(x,y)}{p(x)p(y)} }}
+
+\mathcard{Independence Bound on Entropy}{H(X_1,...,X_n) \leq \sum_i{ H(X_i) }}
+\mathcard{Fano's Inequality}{P_e \geq \frac{1 - H(X \mid Y)}{\log{|X|}}}
+\card{Data Processing Inequality}
+{
+    If \(X \rightarrow Y \rightarrow Z\) for some transformation \(\rightarrow\), then \(I(X;Y) \geq I(X;Z)\).
+}
+
+\mathcard{Mutual Information Distance}{D(X,Y) = H(X,Y) - I(X;Y)}
+\mathcard{Kullback-Leibler Distance}{D_{KL}(p \mid\mid q) = \sum_x{ p(x) \log\frac{p(x)}{q(x)} }}
+
+\card{Markov Process Entropy}{Average of the entropy of each state weighted by occupancy probability.}
+
 \end{document}
